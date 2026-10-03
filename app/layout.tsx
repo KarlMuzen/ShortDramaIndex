@@ -98,11 +98,16 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${mainFont.variable} ${notoSansSC.variable} ${notoSansJP.variable} ${notoSansKR.variable}`}
     >
-      <body className="min-h-screen flex flex-col bg-[var(--paper)] text-[var(--ink)] antialiased">
+      <head>
         <script
           id="theme-init-script"
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
+      </head>
+      <body
+        suppressHydrationWarning
+        className="min-h-screen flex flex-col bg-[var(--paper)] text-[var(--ink)] antialiased"
+      >
         <ThemeProvider>
           <SessionProvider>
             <ToastProvider>
