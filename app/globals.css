@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-muted: var(--muted);
+  --color-crimson: var(--crimson);
+  --color-crimson-hover: var(--crimson-hover);
+  --color-crimson-subtle: var(--crimson-subtle);
+
+  --color-status-verified: var(--status-verified);
+  --color-status-verified-bg: var(--status-verified-bg);
+  --color-status-pending: var(--status-pending);
+  --color-status-pending-bg: var(--status-pending-bg);
+  --color-status-disputed: var(--status-disputed);
+  --color-status-disputed-bg: var(--status-disputed-bg);
+
+  --font-sans: var(--font-main), var(--font-cjk-sc), var(--font-cjk-jp), var(--font-cjk-kr), system-ui, -apple-system, sans-serif;
+
+  --radius-control: 8px;
+  --radius-surface: 12px;
+  --radius-full: 9999px;
+}
+
+:root {
+  --ink: #14161B;
+  --paper: #F6F7F9;
+  --surface: #FFFFFF;
+  --surface-subtle: #EEF1F5;
+  --surface-hover: #F8F9FB;
+  --line: #E2E5EB;
+  --line-strong: #CBD1DC;
+  --muted: #5A6072;
+  --crimson: #B3123C;
+  --crimson-hover: #960F32;
+  --crimson-subtle: #FDF2F4;
+
+  --status-verified: #1F7A4D;
+  --status-verified-bg: #EBF7F0;
+  --status-pending: #8A6100;
+  --status-pending-bg: #FEF9EB;
+  --status-disputed: #B3123C;
+  --status-disputed-bg: #FDF2F4;
+}
+
+.dark {
+  --ink: #F0F2F6;
+  --paper: #0F1117;
+  --surface: #161922;
+  --surface-subtle: #1F2430;
+  --surface-hover: #1C202B;
+  --line: #262B38;
+  --line-strong: #363D4F;
+  --muted: #8B93A7;
+  --crimson: #E0315A;
+  --crimson-hover: #EC4970;
+  --crimson-subtle: #29141C;
+
+  --status-verified: #27965E;
+  --status-verified-bg: #10261D;
+  --status-pending: #D49B1E;
+  --status-pending-bg: #2B210B;
+  --status-disputed: #E0315A;
+  --status-disputed-bg: #29141C;
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--line);
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings scale and line height */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+/* Number formatting for counts and dates */
+.num, .tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Keyboard focus rings */
+:focus-visible {
+  outline: 2px solid var(--crimson);
+  outline-offset: 2px;
+}
