@@ -9,15 +9,7 @@ import { Breadcrumb } from '@/src/components/ui/breadcrumb';
 import { Poster } from '@/src/components/ui/poster';
 import { Star } from 'lucide-react';
 
-export const dynamicParams = true;
-export const revalidate = 3600;
-
-export async function generateStaticParams() {
-  const people = await getAllPeople();
-  return people.map((person) => ({
-    slug: `${person.id}-${person.slug}`,
-  }));
-}
+export const dynamic = 'force-dynamic';
 
 interface PersonPageProps {
   params: Promise<{

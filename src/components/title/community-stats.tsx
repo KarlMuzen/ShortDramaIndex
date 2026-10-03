@@ -40,9 +40,9 @@ export function CommunityStats({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start pt-1">
         {/* Left: Overall score & breakdown */}
-        <div className="md:col-span-6 p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[12px] space-y-4">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-[13px] font-semibold text-[var(--ink)]">
               Score rating
@@ -80,31 +80,31 @@ export function CommunityStats({
         </div>
 
         {/* Right: Listed counts stats */}
-        <div className="md:col-span-6 p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[12px] space-y-3">
+        <div className="space-y-3">
           <span className="text-[13px] font-semibold text-[var(--ink)] block">
             Watchlist tracking
           </span>
 
-          <div className="space-y-2.5 divide-y divide-[var(--line)] text-[13px]">
-            <div className="flex items-center justify-between pt-1">
+          <div className="space-y-2.5 divide-y divide-[var(--line)] text-[13px] border-y border-[var(--line)]">
+            <div className="flex items-center justify-between py-2">
               <span className="text-[var(--muted)]">Watching</span>
               <span className="font-semibold text-[var(--ink)] tabular-nums">
                 {watchingCount.toLocaleString()}
               </span>
             </div>
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between py-2">
               <span className="text-[var(--muted)]">Plan to watch</span>
               <span className="font-semibold text-[var(--ink)] tabular-nums">
                 {planToWatchCount.toLocaleString()}
               </span>
             </div>
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between py-2">
               <span className="text-[var(--muted)]">Completed</span>
               <span className="font-semibold text-[var(--ink)] tabular-nums">
                 {completedCount.toLocaleString()}
               </span>
             </div>
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between py-2">
               <span className="text-[var(--muted)]">Total tracking</span>
               <span className="font-bold text-[var(--crimson)] tabular-nums">
                 {(watchingCount + planToWatchCount + completedCount).toLocaleString()}

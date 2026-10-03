@@ -44,6 +44,7 @@ export interface Release {
   dubLanguage?: string;
   subtitleLanguages?: string[];
   episodeCount?: number;
+  releasedYear?: number;
   url: string;
   lastChecked: string;
   linkStatus: LinkStatus;
@@ -79,6 +80,7 @@ export interface Series {
   title: string;
   romanizedTitle?: string;
   originalLanguage: string;
+  originCountry?: string; // ISO 3166-1 alpha-2, e.g. "CN", "KR", "US"
   year: number;
   episodeCount: number;
   avgEpisodeMinutes?: number;

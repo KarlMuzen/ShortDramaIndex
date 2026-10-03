@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 
 const sections = [
-  { id: 'overview', label: 'Overview' },
   { id: 'names', label: 'Names' },
   { id: 'watch', label: 'Where to watch' },
   { id: 'versions', label: 'Versions' },
@@ -12,7 +11,7 @@ const sections = [
 ];
 
 export function TitleNav() {
-  const [activeId, setActiveId] = useState('overview');
+  const [activeId, setActiveId] = useState('names');
 
   useEffect(() => {
     const handleScroll = () => {

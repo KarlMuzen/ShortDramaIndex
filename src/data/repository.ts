@@ -29,6 +29,7 @@ import {
   mockContributions,
   mockRevisions,
   mockRedirects,
+  MOCK_NOW,
 } from './mock';
 import { getLanguageName } from '@/src/lib/languages';
 import { cookies } from 'next/headers';
@@ -126,7 +127,7 @@ export interface HomeFeedData {
 function getRelativeTimeString(dateStr: string): string {
   try {
     const past = new Date(dateStr).getTime();
-    const now = new Date('2024-10-01').getTime();
+    const now = MOCK_NOW.getTime();
     const diffHours = Math.max(1, Math.round((now - past) / (1000 * 60 * 60)));
 
     if (diffHours < 24) {

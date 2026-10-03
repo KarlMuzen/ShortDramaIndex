@@ -11,15 +11,7 @@ import { Pagination } from '@/src/components/ui/pagination';
 import { EmptyState } from '@/src/components/ui/empty-state';
 import { Tv, Star, ExternalLink } from 'lucide-react';
 
-export const dynamicParams = true;
-export const revalidate = 3600;
-
-export async function generateStaticParams() {
-  const platforms = await getAllPlatforms();
-  return platforms.map((platform) => ({
-    slug: platform.slug,
-  }));
-}
+export const dynamic = 'force-dynamic';
 
 interface PlatformPageProps {
   params: Promise<{

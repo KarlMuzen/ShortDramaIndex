@@ -22,6 +22,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}/guidelines`,
     },
     {
+      url: `${baseUrl}/terms`,
+    },
+    {
+      url: `${baseUrl}/privacy`,
+    },
+    {
       url: `${baseUrl}/takedown`,
     },
   ];

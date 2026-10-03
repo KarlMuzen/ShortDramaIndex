@@ -11,15 +11,7 @@ import { Pagination } from '@/src/components/ui/pagination';
 import { EmptyState } from '@/src/components/ui/empty-state';
 import { Hash, Star } from 'lucide-react';
 
-export const dynamicParams = true;
-export const revalidate = 3600;
-
-export async function generateStaticParams() {
-  const tags = await getAllTags();
-  return tags.map((tag) => ({
-    slug: tag.slug,
-  }));
-}
+export const dynamic = 'force-dynamic';
 
 interface TagPageProps {
   params: Promise<{
