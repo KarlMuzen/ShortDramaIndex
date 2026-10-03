@@ -1,13 +1,23 @@
 import React from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { getPersonByIdOrSlug } from '@/src/data/repository';
+import { getPersonByIdOrSlug, getAllPeople } from '@/src/data/repository';
 import { siteConfig } from '@/src/config/site';
 import { titlePath, personPath } from '@/src/lib/urls';
 import { Breadcrumb } from '@/src/components/ui/breadcrumb';
 import { Poster } from '@/src/components/ui/poster';
 import { Star } from 'lucide-react';
+
+export const dynamicParams = true;
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const people = await getAllPeople();
+  return people.map((person) => ({
+    slug: `${person.id}-${person.slug}`,
+  }));
+}
 
 interface PersonPageProps {
   params: Promise<{
@@ -21,7 +31,12 @@ export async function generateMetadata({
   const { slug } = await params;
   const data = await getPersonByIdOrSlug(slug);
 
-  if (!data) return { title: 'Person Not Found' };
+  if (!data) {
+    return {
+      title: 'Person not found',
+      robots: { index: false },
+    };
+  }
 
   const titleString = `${data.person.name}: short drama credits`;
   const fullDesc = `Credits and filmography for ${data.person.name} across indexed short vertical dramas. View verified acting and directing roles.`;
@@ -58,6 +73,13 @@ export default async function PersonPage({ params }: PersonPageProps) {
   }
 
   const { person, credits } = personData;
+
+  // Canonical slug enforcement (same logic as the title page)
+  const expectedSlug = `${person.id}-${person.slug}`;
+  if (slug !== expectedSlug) {
+    permanentRedirect(personPath(person));
+  }
+
   const canonicalUrl = `${siteConfig.baseUrl}${personPath(person)}`;
 
   // BreadcrumbList JSON-LD

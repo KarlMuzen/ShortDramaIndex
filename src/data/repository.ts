@@ -178,7 +178,9 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
 
   const languageCounts: Record<string, number> = {};
   for (const s of mockSeriesList) {
-    languageCounts[s.originalLanguage] = (languageCounts[s.originalLanguage] || 0) + 1;
+    if (s.visibility === 'public') {
+      languageCounts[s.originalLanguage] = (languageCounts[s.originalLanguage] || 0) + 1;
+    }
   }
 
   const browseLanguages: BrowseLanguage[] = [
@@ -485,7 +487,8 @@ export async function searchSeries(params: {
 export async function getSeriesById(id: number): Promise<Series | null> {
   await new Promise((r) => setTimeout(r, 10));
   const series = mockSeriesList.find((s) => s.id === id);
-  return series || null;
+  if (!series || series.visibility === 'removed') return null;
+  return series;
 }
 
 /**
@@ -501,7 +504,9 @@ export async function getRelatedSeries(
 
   const currentTagSlugs = new Set(current.tags.map((t) => t.slug));
 
-  const others = mockSeriesList.filter((s) => s.id !== id);
+  const others = mockSeriesList.filter(
+    (s) => s.id !== id && s.visibility === 'public'
+  );
   others.sort((a, b) => {
     const aMatch = a.tags.filter((t) => currentTagSlugs.has(t.slug)).length;
     const bMatch = b.tags.filter((t) => currentTagSlugs.has(t.slug)).length;
@@ -521,6 +526,7 @@ export async function lookupLink(
   const cleanUrl = url.trim().toLowerCase();
 
   for (const series of mockSeriesList) {
+    if (series.visibility === 'removed') continue;
     for (const release of series.releases) {
       const relUrl = release.url.toLowerCase();
       if (
@@ -545,8 +551,8 @@ export async function getTag(
   const tag = mockTags.find((t) => t.slug === slug);
   if (!tag) return null;
 
-  const series = mockSeriesList.filter((s) =>
-    s.tags.some((t) => t.slug === slug)
+  const series = mockSeriesList.filter(
+    (s) => s.visibility === 'public' && s.tags.some((t) => t.slug === slug)
   );
   return { tag: { ...tag, count: series.length }, series };
 }
@@ -561,8 +567,8 @@ export async function getPlatform(
   const platform = mockPlatforms.find((p) => p.slug === slug);
   if (!platform) return null;
 
-  const series = mockSeriesList.filter((s) =>
-    s.releases.some((r) => r.platformSlug === slug)
+  const series = mockSeriesList.filter(
+    (s) => s.visibility === 'public' && s.releases.some((r) => r.platformSlug === slug)
   );
   return { platform, series };
 }
@@ -577,8 +583,8 @@ export async function getPerson(
   const person = mockPeople.find((p) => p.id === id);
   if (!person) return null;
 
-  const filmography = mockSeriesList.filter((s) =>
-    s.cast.some((c) => c.person.id === id)
+  const filmography = mockSeriesList.filter(
+    (s) => s.visibility === 'public' && s.cast.some((c) => c.person.id === id)
   );
 
   return { person: { ...person, dramaCount: filmography.length }, filmography };
@@ -605,7 +611,7 @@ export async function getSession(): Promise<User | null> {
  * Gets all series for catalog indexing and sitemaps
  */
 export async function getAllSeries(): Promise<Series[]> {
-  return mockSeriesList;
+  return mockSeriesList.filter((s) => s.visibility === 'public');
 }
 
 /**
@@ -652,13 +658,14 @@ export async function getUserProfileData(
   await new Promise((r) => setTimeout(r, 10));
 
   const clean = handleOrName.toLowerCase().replace(/^@/, '');
-  const user =
-    mockUsers.find(
-      (u) =>
-        u.handle.toLowerCase() === clean ||
-        u.name.toLowerCase().replace(/\s+/g, '-') === clean ||
-        u.name.toLowerCase() === clean
-    ) || mockUsers[0];
+  const user = mockUsers.find(
+    (u) =>
+      u.handle.toLowerCase() === clean ||
+      u.name.toLowerCase().replace(/\s+/g, '-') === clean ||
+      u.name.toLowerCase() === clean
+  );
+
+  if (!user) return null;
 
   const userEntries = mockUserListEntries.filter((e) => e.userId === user.id);
   const enrichedEntries = userEntries
@@ -825,8 +832,10 @@ export async function getSeriesByPlatform(
 }> {
   await new Promise((r) => setTimeout(r, 10));
 
-  let matched = mockSeriesList.filter((s) =>
-    s.releases.some((r) => r.platformSlug.toLowerCase() === platformSlug.toLowerCase())
+  let matched = mockSeriesList.filter(
+    (s) =>
+      s.visibility === 'public' &&
+      s.releases.some((r) => r.platformSlug.toLowerCase() === platformSlug.toLowerCase())
   );
 
   if (sort === 'newest') {
@@ -841,14 +850,13 @@ export async function getSeriesByPlatform(
 
   const total = matched.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.min(Math.max(1, page), totalPages);
-  const start = (currentPage - 1) * pageSize;
-  const items = matched.slice(start, start + pageSize);
+  const start = (page - 1) * pageSize;
+  const items = (page >= 1 && page <= totalPages) ? matched.slice(start, start + pageSize) : [];
 
   return {
     items,
     total,
-    page: currentPage,
+    page,
     pageSize,
     totalPages,
   };
@@ -889,8 +897,10 @@ export async function getSeriesByTag(
 }> {
   await new Promise((r) => setTimeout(r, 10));
 
-  let matched = mockSeriesList.filter((s) =>
-    s.tags.some((t) => t.slug.toLowerCase() === tagSlug.toLowerCase())
+  let matched = mockSeriesList.filter(
+    (s) =>
+      s.visibility === 'public' &&
+      s.tags.some((t) => t.slug.toLowerCase() === tagSlug.toLowerCase())
   );
 
   if (sort === 'newest') {
@@ -905,14 +915,13 @@ export async function getSeriesByTag(
 
   const total = matched.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.min(Math.max(1, page), totalPages);
-  const start = (currentPage - 1) * pageSize;
-  const items = matched.slice(start, start + pageSize);
+  const start = (page - 1) * pageSize;
+  const items = (page >= 1 && page <= totalPages) ? matched.slice(start, start + pageSize) : [];
 
   return {
     items,
     total,
-    page: currentPage,
+    page,
     pageSize,
     totalPages,
   };
@@ -944,13 +953,14 @@ export async function getPersonByIdOrSlug(
       (personId !== null && p.id === personId) ||
       p.slug.toLowerCase() === clean ||
       p.name.toLowerCase().replace(/\s+/g, '-') === clean
-  ) || mockPeople[0];
+  );
 
   if (!person) return null;
 
   const credits: PersonCredit[] = [];
 
   for (const s of mockSeriesList) {
+    if (s.visibility !== 'public') continue;
     const roleMatch = s.cast.find((c) => c.person.id === person.id);
     if (roleMatch) {
       credits.push({
@@ -959,20 +969,6 @@ export async function getPersonByIdOrSlug(
         roleType: roleMatch.roleType,
       });
     }
-  }
-
-  // If no explicit cast links in mock, attach 2 sample series to illustrate rich credits
-  if (credits.length === 0) {
-    credits.push({
-      series: mockSeriesList[0],
-      characterName: 'Lead Protagonist',
-      roleType: person.role,
-    });
-    credits.push({
-      series: mockSeriesList[1],
-      characterName: 'Key Character',
-      roleType: person.role,
-    });
   }
 
   return {

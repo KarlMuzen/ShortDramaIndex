@@ -179,7 +179,7 @@ export function Header() {
                     <button
                       type="button"
                       aria-label="User profile menu"
-                      className="flex items-center gap-2 pl-1.5 pr-2 py-1 rounded-[8px] hover:bg-[var(--surface-subtle)] border border-transparent hover:border-[var(--line)] transition-colors select-none cursor-pointer"
+                      className="flex items-center gap-2 pl-1.5 pr-2 py-1 rounded-[8px] hover:bg-[var(--surface-subtle)] border border-transparent hover:border-[var(--line)] transition-colors select-none cursor-pointer h-8"
                     >
                       <div className="w-6 h-6 rounded-full bg-[var(--crimson)] text-white text-[11px] font-bold flex items-center justify-center">
                         {user.name.charAt(0)}
@@ -201,7 +201,7 @@ export function Header() {
 
                   <MenuDivider />
 
-                  <div className="px-3 py-1 text-[11px] font-medium text-[var(--muted)] uppercase tracking-wider">
+                  <div className="px-3 py-1 text-[12px] text-[var(--muted)]">
                     Switch Mock User
                   </div>
                   {availableUsers.map((u) => (
@@ -232,12 +232,13 @@ export function Header() {
                   </MenuItem>
                 </Menu>
               ) : (
-                <Link
-                  href="/login"
-                  className="text-[13px] font-medium text-[var(--crimson)] px-3 py-1.5 rounded-[8px] hover:bg-[var(--crimson-subtle)] transition-colors"
+                <div
+                  className="flex items-center gap-2 pl-1.5 pr-2 py-1 rounded-[8px] h-8 bg-[var(--surface-subtle)] border border-[var(--line)] select-none"
+                  aria-hidden="true"
                 >
-                  Sign in
-                </Link>
+                  <div className="w-6 h-6 rounded-full bg-[var(--line)]" />
+                  <span className="hidden sm:inline-block w-16 h-3 bg-[var(--line)] rounded-[4px]" />
+                </div>
               )}
             </div>
           </>

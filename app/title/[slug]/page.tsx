@@ -6,6 +6,7 @@ import {
   getSeriesById,
   getRelatedSeries,
   checkRedirect,
+  getAllSeries,
 } from '@/src/data/repository';
 import { getLanguageName } from '@/src/lib/languages';
 import { parseTitleParam, titlePath, personPath, tagPath } from '@/src/lib/urls';
@@ -21,7 +22,15 @@ import { TitleNav } from '@/src/components/title/title-nav';
 import { CommunityStats } from '@/src/components/title/community-stats';
 import { TitleFooterHistory } from '@/src/components/title/title-footer-history';
 
+export const dynamicParams = true;
 export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const seriesList = await getAllSeries();
+  return seriesList.map((series) => ({
+    slug: `${series.id}-${series.slug}`,
+  }));
+}
 
 interface TitlePageProps {
   params: Promise<{
@@ -34,7 +43,12 @@ export async function generateMetadata({
 }: TitlePageProps): Promise<Metadata> {
   const { slug } = await params;
   const id = parseTitleParam(slug);
-  if (!id) return { title: 'Drama Not Found' };
+  if (!id) {
+    return {
+      title: 'Drama not found',
+      robots: { index: false },
+    };
+  }
 
   // Check redirect
   const redirectTargetId = await checkRedirect(id);
@@ -51,7 +65,12 @@ export async function generateMetadata({
   }
 
   const series = await getSeriesById(id);
-  if (!series) return { title: 'Drama Not Found' };
+  if (!series) {
+    return {
+      title: 'Drama not found',
+      robots: { index: false },
+    };
+  }
 
   // Description formula: "{canonical title}, {episode count} episodes. Also known as {up to 3 aliases, one per language}. Where to watch: {up to 3 platforms}."
   const seenLangs = new Set<string>();

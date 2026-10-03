@@ -7,44 +7,22 @@ import {
   getAllPeople,
 } from '@/src/data/repository';
 
-export async function generateSitemaps() {
-  // 1 sitemap per 10,000 URLs
-  return [{ id: 0 }];
-}
-
-export default async function sitemap({
-  id,
-}: {
-  id: number;
-}): Promise<MetadataRoute.Sitemap> {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.baseUrl;
-  const now = new Date();
 
-  // Static routes
+  // Static routes (no lastModified, changeFrequency or priority)
   const staticRoutes: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 1.0,
     },
     {
       url: `${baseUrl}/about`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.8,
     },
     {
       url: `${baseUrl}/guidelines`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.8,
     },
     {
       url: `${baseUrl}/takedown`,
-      lastModified: now,
-      changeFrequency: 'yearly',
-      priority: 0.5,
     },
   ];
 
@@ -55,38 +33,32 @@ export default async function sitemap({
     getAllPeople(),
   ]);
 
-  // Titles (only indexable titles: with synopsis or releases and not hidden)
+  // Titles: only public titles that have a synopsis or at least one release
+  // Use updatedAt as lastModified for titles
   const titleRoutes: MetadataRoute.Sitemap = seriesList
-    .filter((s) => (s.synopsis || s.releases.length > 0) && s.visibility !== 'hidden')
+    .filter(
+      (s) =>
+        s.visibility === 'public' &&
+        (Boolean(s.synopsis) || s.releases.length > 0)
+    )
     .map((s) => ({
       url: `${baseUrl}/title/${s.id}-${s.slug}`,
-      lastModified: s.updatedAt ? new Date(s.updatedAt) : now,
-      changeFrequency: 'weekly',
-      priority: 0.9,
+      lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(),
     }));
 
-  // Platform pages
+  // Platform pages (omit lastModified, changeFrequency, priority)
   const platformRoutes: MetadataRoute.Sitemap = platforms.map((p) => ({
     url: `${baseUrl}/platform/${p.slug}`,
-    lastModified: now,
-    changeFrequency: 'weekly',
-    priority: 0.7,
   }));
 
-  // Tag pages
+  // Tag pages (omit lastModified, changeFrequency, priority)
   const tagRoutes: MetadataRoute.Sitemap = tags.map((t) => ({
     url: `${baseUrl}/tag/${t.slug}`,
-    lastModified: now,
-    changeFrequency: 'weekly',
-    priority: 0.7,
   }));
 
-  // People pages
+  // People pages (omit lastModified, changeFrequency, priority)
   const peopleRoutes: MetadataRoute.Sitemap = people.map((p) => ({
     url: `${baseUrl}/person/${p.id}-${p.slug}`,
-    lastModified: now,
-    changeFrequency: 'monthly',
-    priority: 0.6,
   }));
 
   return [

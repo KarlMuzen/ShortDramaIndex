@@ -2,7 +2,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { getTagBySlug, getSeriesByTag } from '@/src/data/repository';
+import { getTagBySlug, getSeriesByTag, getAllTags } from '@/src/data/repository';
 import { siteConfig } from '@/src/config/site';
 import { titlePath, tagPath } from '@/src/lib/urls';
 import { Breadcrumb } from '@/src/components/ui/breadcrumb';
@@ -11,7 +11,15 @@ import { Pagination } from '@/src/components/ui/pagination';
 import { EmptyState } from '@/src/components/ui/empty-state';
 import { Hash, Star } from 'lucide-react';
 
+export const dynamicParams = true;
 export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const tags = await getAllTags();
+  return tags.map((tag) => ({
+    slug: tag.slug,
+  }));
+}
 
 interface TagPageProps {
   params: Promise<{
@@ -23,16 +31,38 @@ interface TagPageProps {
   }>;
 }
 
+function parsePageParam(pageParam?: string): number | null {
+  if (pageParam === undefined) return 1;
+  if (!/^\d+$/.test(pageParam)) return null;
+  const num = parseInt(pageParam, 10);
+  if (num < 1) return null;
+  return num;
+}
+
 export async function generateMetadata({
   params,
   searchParams,
 }: TagPageProps): Promise<Metadata> {
   const { slug } = await params;
   const sp = await searchParams;
-  const page = parseInt(sp.page || '1', 10);
-  const data = await getTagBySlug(slug);
+  const page = parsePageParam(sp.page);
 
-  if (!data) return { title: 'Tag Not Found' };
+  if (page === null) {
+    return { title: 'Tag not found', robots: { index: false } };
+  }
+
+  const data = await getTagBySlug(slug);
+  if (!data) {
+    return { title: 'Tag not found', robots: { index: false } };
+  }
+
+  const seriesResult = await getSeriesByTag(slug, page, 12);
+  if (seriesResult.total > 0 && page > seriesResult.totalPages) {
+    return { title: 'Tag not found', robots: { index: false } };
+  }
+  if (seriesResult.total === 0 && page > 1) {
+    return { title: 'Tag not found', robots: { index: false } };
+  }
 
   const titleString = `${data.tag.name} short dramas`;
   const fullDesc = data.description;
@@ -66,7 +96,12 @@ export default async function TagPage({
 }: TagPageProps) {
   const { slug } = await params;
   const sp = await searchParams;
-  const page = parseInt(sp.page || '1', 10);
+  const page = parsePageParam(sp.page);
+
+  if (page === null) {
+    notFound();
+  }
+
   const sort = sp.sort || 'popularity';
 
   const tagData = await getTagBySlug(slug);
@@ -76,6 +111,14 @@ export default async function TagPage({
 
   const { tag, description } = tagData;
   const seriesResult = await getSeriesByTag(slug, page, 12, sort);
+
+  // If page is above totalPages (when total is above 0), or page > 1 when total is 0, 404
+  if (seriesResult.total > 0 && page > seriesResult.totalPages) {
+    notFound();
+  }
+  if (seriesResult.total === 0 && page > 1) {
+    notFound();
+  }
   const canonicalUrl = `${siteConfig.baseUrl}/tag/${slug}${page > 1 ? `?page=${page}` : ''}`;
 
   // BreadcrumbList Structured Data

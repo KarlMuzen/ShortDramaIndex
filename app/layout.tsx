@@ -7,7 +7,6 @@ import {
 } from 'next/font/google';
 import './globals.css';
 import { siteConfig } from '@/src/config/site';
-import { getSession } from '@/src/data/repository';
 import { SessionProvider } from '@/src/context/session-context';
 import { ThemeProvider } from '@/src/context/theme-context';
 import { ToastProvider } from '@/src/components/ui/toast';
@@ -88,28 +87,24 @@ const themeInitScript = `
 })();
 `;
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const sessionUser = await getSession();
-
   return (
     <html
       lang="en"
       suppressHydrationWarning
       className={`${mainFont.variable} ${notoSansSC.variable} ${notoSansJP.variable} ${notoSansKR.variable}`}
     >
-      <head>
+      <body className="min-h-screen flex flex-col bg-[var(--paper)] text-[var(--ink)] antialiased">
         <script
           id="theme-init-script"
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
-      </head>
-      <body className="min-h-screen flex flex-col bg-[var(--paper)] text-[var(--ink)] antialiased">
         <ThemeProvider>
-          <SessionProvider initialUser={sessionUser}>
+          <SessionProvider>
             <ToastProvider>
               <Header />
               <main className="flex-1 w-full max-w-[1120px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">

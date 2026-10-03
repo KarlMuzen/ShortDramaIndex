@@ -1,9 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@/src/data/types';
 import { mockUsers } from '@/src/data/mock';
 import { setMockUserAction } from '@/src/data/actions';
+import { loadSession } from '@/src/data/session-client';
 
 interface SessionContextValue {
   user: User | null;
@@ -16,14 +17,25 @@ interface SessionContextValue {
 const SessionContext = createContext<SessionContextValue | undefined>(undefined);
 
 export function SessionProvider({
-  initialUser,
   children,
 }: {
-  initialUser: User | null;
   children: React.ReactNode;
 }) {
-  const [user, setUser] = useState<User | null>(initialUser || mockUsers[0]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    loadSession().then((loaded) => {
+      if (isMounted) {
+        setUser(loaded || mockUsers[0]);
+        setIsLoading(false);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const switchUser = async (userId: string) => {
     setIsLoading(true);

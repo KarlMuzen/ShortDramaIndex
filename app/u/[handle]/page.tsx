@@ -18,14 +18,18 @@ export async function generateMetadata({
   const { handle } = await params;
   const profile = await getUserProfileData(handle);
 
-  if (!profile) return { title: 'User Profile' };
+  if (!profile) {
+    return {
+      title: 'User not found',
+      robots: { index: false },
+    };
+  }
 
   return {
     title: `${profile.user.name} (@${profile.user.handle})`,
     description: `View ${profile.user.name}'s short drama watchlists, ratings, and alias contributions.`,
     robots: {
       index: false,
-      follow: true,
     },
     alternates: {
       canonical: `${siteConfig.baseUrl}/u/${profile.user.handle}`,
