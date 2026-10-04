@@ -251,14 +251,14 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
     try {
       const { data: popularData, error: popError } = await supabasePublic
         .from('series')
-        .select('id, slug, title, year, episode_count, visibility, list_count, rating_count')
+        .select('id, short_id, slug, title, year, episode_count, visibility, list_count, rating_count')
         .eq('visibility', 'public')
         .order('list_count', { ascending: false })
         .limit(6);
 
       const { data: aliasData, error: aliasError } = await supabasePublic
         .from('aliases')
-        .select('text, language, source_url, source_label, added_at, series:series_id(id, slug, title, visibility)')
+        .select('text, language, source_url, source_label, status, added_at, series:series_id(id, short_id, slug, title, visibility)')
         .order('added_at', { ascending: false })
         .limit(7);
 
@@ -282,9 +282,11 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         };
       }
 
-      const popularThisWeek: Series[] = (popularData || []).map((p: any) => ({
-        id: Number(p.id),
-        shortId: p.short_id || String(p.id),
+      const popularThisWeek: Series[] = (popularData || []).map((p: any) => {
+        if (!p.short_id) throw new Error('short_id missing in select');
+        return {
+          id: Number(p.id),
+          shortId: p.short_id,
         slug: p.slug,
         title: p.title,
         originalLanguage: 'zh',
@@ -298,8 +300,9 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         tags: [],
         aliases: [],
         releases: [],
-        cast: [],
-      }));
+          cast: [],
+        };
+      });
 
       const recentlyAddedAliases: RecentAliasEntry[] = (aliasData || [])
         .filter((a: any) => a.series && a.series.visibility === 'public')
@@ -308,11 +311,16 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
             text: a.text,
             language: a.language,
             source: a.source_label || a.source_url || 'Community',
-            status: 'verified',
+            sourceUrl: a.source_url || undefined,
+            status: a.status || 'pending',
             addedBy: 'Contributor',
             addedAt: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
           },
           seriesId: Number(a.series.id),
+          seriesShortId: (() => {
+            if (!a.series.short_id) throw new Error('short_id missing in select');
+            return a.series.short_id;
+          })(),
           seriesSlug: a.series.slug,
           seriesTitle: a.series.title,
           addedAt: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
@@ -320,11 +328,11 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         }));
 
       const browseLanguages: BrowseLanguage[] = [
-        { code: 'zh', label: 'Chinese', nativeLabel: '中文', count: 0 },
-        { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: 0 },
-        { code: 'en', label: 'English', nativeLabel: 'English', count: 0 },
-        { code: 'es', label: 'Spanish', nativeLabel: 'Español', count: 0 },
-        { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: 0 },
+        { code: 'zh', label: 'Chinese', nativeLabel: '中文' },
+        { code: 'ko', label: 'Korean', nativeLabel: '한국어' },
+        { code: 'en', label: 'English', nativeLabel: 'English' },
+        { code: 'es', label: 'Spanish', nativeLabel: 'Español' },
+        { code: 'ja', label: 'Japanese', nativeLabel: '日本語' },
       ];
 
       return {
@@ -550,6 +558,10 @@ export async function searchSeries(params: {
       const items: SearchResultItem[] = data.map((row: any) => {
         const series: Series = {
           id: Number(row.id),
+          shortId: (() => {
+            if (!row.short_id) throw new Error('short_id missing in select');
+            return row.short_id;
+          })(),
           slug: row.slug,
           title: row.title,
           romanizedTitle: row.romanized_title || undefined,
@@ -569,8 +581,9 @@ export async function searchSeries(params: {
                 {
                   text: row.matched_alias_text,
                   language: row.matched_alias_language || 'zh',
-                  source: 'Verified',
-                  status: 'verified',
+                  source: row.matched_alias_source_url || 'Community',
+                  sourceUrl: row.matched_alias_source_url || undefined,
+                  status: row.matched_alias_status || 'pending',
                   addedBy: 'Editor',
                   addedAt: '2024-01-01',
                 },
@@ -585,8 +598,9 @@ export async function searchSeries(params: {
               alias: {
                 text: row.matched_alias_text,
                 language: row.matched_alias_language || 'zh',
-                source: 'Verified',
-                status: 'verified',
+                source: row.matched_alias_source_url || 'Community',
+                sourceUrl: row.matched_alias_source_url || undefined,
+                status: row.matched_alias_status || 'pending',
                 addedBy: 'Editor',
                 addedAt: '2024-01-01',
               },
