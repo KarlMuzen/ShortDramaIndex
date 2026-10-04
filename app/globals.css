@@ -20,7 +20,7 @@
   --color-status-disputed: var(--status-disputed);
   --color-status-disputed-bg: var(--status-disputed-bg);
 
-  --font-sans: var(--font-main), var(--font-cjk-sc), var(--font-cjk-jp), var(--font-cjk-kr), system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-main), "PingFang SC", "Hiragino Sans", "Yu Gothic", "Malgun Gothic", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
 
   --radius-control: 8px;
   --radius-surface: 12px;
@@ -98,6 +98,23 @@ h1, h2, h3, h4, h5, h6 {
 /* Number formatting for counts and dates */
 .num, .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Multilingual CJK System Font Stacks (zero webfont download overhead) */
+:lang(zh), :lang(zh-CN), :lang(zh-Hans) {
+  font-family: var(--font-main), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+}
+
+:lang(zh-TW), :lang(zh-HK), :lang(zh-Hant) {
+  font-family: var(--font-main), "PingFang TC", "PingFang HK", "Microsoft JhengHei", "Noto Sans CJK TC", "Source Han Sans TC", sans-serif;
+}
+
+:lang(ja) {
+  font-family: var(--font-main), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", "Noto Sans CJK JP", sans-serif;
+}
+
+:lang(ko) {
+  font-family: var(--font-main), "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Nanum Gothic", sans-serif;
 }
 
 /* Respect reduced motion */

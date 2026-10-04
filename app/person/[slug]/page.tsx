@@ -175,8 +175,7 @@ export default async function PersonPage({ params }: PersonPageProps) {
                 >
                   <Poster
                     title={credit.series.title}
-                    year={credit.series.year}
-                    episodeCount={credit.series.episodeCount}
+                    src={credit.series.posterUrl}
                     className="rounded-[4px] h-full"
                   />
                 </Link>

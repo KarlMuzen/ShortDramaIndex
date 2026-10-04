@@ -2,16 +2,18 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { siteConfig } from '@/src/config/site';
+import { useRouter, usePathname } from 'next/navigation';
+import { siteConfig, SEARCH_PLACEHOLDER } from '@/src/config/site';
 import { useSession } from '@/src/context/session-context';
 import { useTheme } from '@/src/context/theme-context';
 import { IconButton } from '../ui/icon-button';
 import { Menu, MenuItem, MenuDivider } from '../ui/menu';
-import { Search, Sun, Moon, Laptop, LogOut, User as UserIcon, X } from 'lucide-react';
+import { Search, Sun, Moon, Laptop, LogOut, X } from 'lucide-react';
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
+  const isAuthPage = pathname === '/sign-in' || pathname === '/sign-up';
   const { user, signOut, isLoading } = useSession();
   const { theme, setTheme, mounted } = useTheme();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -48,7 +50,7 @@ export function Header() {
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by title, alias, Chinese name..."
+                placeholder={SEARCH_PLACEHOLDER}
                 className="w-full h-9 pl-9 pr-8 text-[14px] bg-[var(--surface-subtle)] text-[var(--ink)] placeholder:text-[var(--muted)] rounded-[8px] border border-[var(--line)] focus:border-[var(--crimson)] outline-none"
               />
               {searchQuery && (
@@ -89,12 +91,6 @@ export function Header() {
                 >
                   Browse
                 </Link>
-                <Link
-                  href="/dev/kit"
-                  className="hover:text-[var(--crimson)] transition-colors text-[var(--crimson)] font-medium"
-                >
-                  UI Kit
-                </Link>
               </nav>
             </div>
 
@@ -109,7 +105,7 @@ export function Header() {
                   type="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search titles, aliases (e.g. 霸总, CEO, English)..."
+                  placeholder={SEARCH_PLACEHOLDER}
                   className="w-full h-9 pl-9 pr-3 text-[13px] bg-[var(--surface-subtle)] text-[var(--ink)] placeholder:text-[var(--muted)] rounded-[8px] border border-[var(--line)] hover:border-[var(--line-strong)] focus:border-[var(--crimson)] focus:bg-[var(--surface)] outline-none transition-colors"
                 />
               </form>
@@ -171,7 +167,7 @@ export function Header() {
                 </MenuItem>
               </Menu>
 
-              {/* User Session Avatar / Menu */}
+              {/* User Session / Auth Buttons */}
               {user ? (
                 <Menu
                   align="right"
@@ -212,9 +208,6 @@ export function Header() {
                   <MenuItem onClick={() => router.push('/settings')}>
                     Settings
                   </MenuItem>
-                  <MenuItem onClick={() => router.push('/dev/kit')}>
-                    UI Kit & Tokens
-                  </MenuItem>
 
                   <MenuDivider />
                   <MenuItem
@@ -236,7 +229,7 @@ export function Header() {
                   <div className="w-6 h-6 rounded-full bg-[var(--line)]" />
                   <span className="hidden sm:inline-block w-16 h-3 bg-[var(--line)] rounded-[4px]" />
                 </div>
-              ) : (
+              ) : isAuthPage ? null : (
                 <div className="flex items-center gap-2">
                   <Link
                     href="/sign-in"
@@ -246,9 +239,9 @@ export function Header() {
                   </Link>
                   <Link
                     href="/sign-up"
-                    className="px-3 py-1.5 text-[13px] font-medium bg-[var(--crimson)] text-white hover:bg-[var(--crimson-hover)] rounded-[8px] transition-colors shadow-xs"
+                    className="hidden sm:inline-flex px-3 py-1.5 text-[13px] font-medium text-[var(--ink)] hover:text-[var(--crimson)] border border-[var(--line)] hover:border-[var(--line-strong)] rounded-[8px] transition-colors"
                   >
-                    Sign up
+                    Create account
                   </Link>
                 </div>
               )}

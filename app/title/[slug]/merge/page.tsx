@@ -15,6 +15,7 @@ import { Dialog } from '@/src/components/ui/dialog';
 import { TextField } from '@/src/components/ui/text-field';
 import { Textarea } from '@/src/components/ui/textarea';
 import { Breadcrumb } from '@/src/components/ui/breadcrumb';
+import { SEARCH_PLACEHOLDER } from '@/src/config/site';
 import {
   GitMerge,
   ArrowRight,
@@ -123,7 +124,7 @@ function TitleMergeContent({ seriesId }: { seriesId: number | null }) {
         <div className="relative">
           <input
             type="search"
-            placeholder="Search candidate drama by title or alias..."
+            placeholder={SEARCH_PLACEHOLDER}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-10 pl-9 pr-3 text-[14px] bg-[var(--surface-subtle)] text-[var(--ink)] placeholder:text-[var(--muted)] rounded-[8px] border border-[var(--line)] focus:border-[var(--crimson)] outline-none"
@@ -170,8 +171,7 @@ function TitleMergeContent({ seriesId }: { seriesId: number | null }) {
             <div className="w-20 shrink-0">
               <Poster
                 title={sourceSeries.title}
-                year={sourceSeries.year}
-                episodeCount={sourceSeries.episodeCount}
+                src={sourceSeries.posterUrl}
               />
             </div>
             <div className="space-y-1">
@@ -225,8 +225,7 @@ function TitleMergeContent({ seriesId }: { seriesId: number | null }) {
             <div className="w-20 shrink-0">
               <Poster
                 title={selectedTarget.title}
-                year={selectedTarget.year}
-                episodeCount={selectedTarget.episodeCount}
+                src={selectedTarget.posterUrl}
               />
             </div>
             <div className="space-y-1">

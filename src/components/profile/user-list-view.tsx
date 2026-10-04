@@ -152,8 +152,7 @@ export function UserListView({ initialEntries, isOwner = true }: UserListViewPro
                         <Link href={titlePath(item.series)} className="block w-10 aspect-[9/16]">
                           <Poster
                             title={item.series.title}
-                            year={item.series.year}
-                            episodeCount={item.series.episodeCount}
+                            src={item.series.posterUrl}
                             className="rounded-[4px] h-full"
                           />
                         </Link>
@@ -259,8 +258,7 @@ export function UserListView({ initialEntries, isOwner = true }: UserListViewPro
                   <Link href={titlePath(item.series)} className="w-14 shrink-0 aspect-[9/16]">
                     <Poster
                       title={item.series.title}
-                      year={item.series.year}
-                      episodeCount={item.series.episodeCount}
+                      src={item.series.posterUrl}
                       className="rounded-[6px] h-full"
                     />
                   </Link>

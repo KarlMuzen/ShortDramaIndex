@@ -14,14 +14,13 @@ import { parseTitleParam, titlePath, personPath, tagPath } from '@/src/lib/urls'
 import { siteConfig } from '@/src/config/site';
 import { Breadcrumb } from '@/src/components/ui/breadcrumb';
 import { Poster } from '@/src/components/ui/poster';
-import { Tag } from '@/src/components/ui/tag';
 import { TitleActions } from '@/src/components/title/title-actions';
 import { SynopsisExpand } from '@/src/components/title/synopsis-expand';
 import { AliasLedger } from '@/src/components/title/alias-ledger';
 import { WhereToWatch } from '@/src/components/title/where-to-watch';
-import { TitleNav } from '@/src/components/title/title-nav';
 import { CommunityStats } from '@/src/components/title/community-stats';
 import { TitleFooterHistory } from '@/src/components/title/title-footer-history';
+import { ChevronDown, Star } from 'lucide-react';
 
 export const dynamicParams = true;
 export const revalidate = 3600;
@@ -43,59 +42,27 @@ export async function generateMetadata({
   params,
 }: TitlePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const id = parseTitleParam(slug);
-  if (!id) {
+  const seriesId = parseTitleParam(slug);
+
+  if (!seriesId) {
     return {
-      title: 'Drama not found',
+      title: 'Short drama not found',
       robots: { index: false },
     };
   }
 
-  // Check redirect
-  const redirectTargetId = await checkRedirect(id);
-  if (redirectTargetId) {
-    const target = await getSeriesById(redirectTargetId);
-    if (target) {
-      return {
-        title: `${target.title} (${target.year}): names and where to watch`,
-        alternates: {
-          canonical: `${siteConfig.baseUrl}${titlePath(target)}`,
-        },
-      };
-    }
-  }
-
-  const series = await getSeriesById(id);
+  const series = await getSeriesById(seriesId);
   if (!series) {
     return {
-      title: 'Drama not found',
+      title: 'Short drama not found',
       robots: { index: false },
     };
   }
 
-  // Description formula: "{canonical title}, {episode count} episodes. Also known as {up to 3 aliases, one per language}. Where to watch: {up to 3 platforms}."
-  const seenLangs = new Set<string>();
-  const uniqueLangAliases: string[] = [];
-  for (const a of series.aliases) {
-    if (!seenLangs.has(a.language)) {
-      seenLangs.add(a.language);
-      uniqueLangAliases.push(a.text);
-      if (uniqueLangAliases.length === 3) break;
-    }
-  }
-  const aliasesString = uniqueLangAliases.join(', ') || 'unlisted';
-  const platforms =
-    Array.from(new Set(series.releases.map((r) => r.platform)))
-      .slice(0, 3)
-      .join(', ') || 'official platforms';
-
-  const fullDesc = `${series.title}, ${series.episodeCount} episodes. Also known as ${aliasesString}. Where to watch: ${platforms}.`;
+  const titleString = `${series.title} - Aliases & Where to Watch`;
+  const fullDesc = series.synopsis || `${series.title} short drama facts, aliases, and official sources.`;
   const description = fullDesc.length > 155 ? `${fullDesc.slice(0, 152)}...` : fullDesc;
-
   const canonicalUrl = `${siteConfig.baseUrl}${titlePath(series)}`;
-  const titleString = `${series.title} (${series.year}): names and where to watch`;
-
-  const isNoIndex = (!series.synopsis && series.releases.length === 0) || series.visibility === 'hidden';
 
   return {
     title: titleString,
@@ -103,9 +70,9 @@ export async function generateMetadata({
     alternates: {
       canonical: canonicalUrl,
     },
-    robots: isNoIndex
-      ? { index: false, follow: true }
-      : { index: true, follow: true },
+    ...(series.visibility === 'hidden'
+      ? { robots: { index: false, follow: false } }
+      : {}),
     openGraph: {
       title: titleString,
       description,
@@ -123,160 +90,83 @@ export async function generateMetadata({
 
 export default async function TitlePage({ params }: TitlePageProps) {
   const { slug } = await params;
-  const id = parseTitleParam(slug);
+  const seriesId = parseTitleParam(slug);
 
-  if (!id) {
+  if (!seriesId) {
     notFound();
   }
 
-  // Check if title has been merged into another canonical entry
-  const redirectTargetId = await checkRedirect(id);
-  if (redirectTargetId) {
-    const target = await getSeriesById(redirectTargetId);
+  // 1. Permanent redirect check if merged
+  const redirectedToId = await checkRedirect(seriesId);
+  if (redirectedToId) {
+    const target = await getSeriesById(redirectedToId);
     if (target) {
       permanentRedirect(titlePath(target));
     }
   }
 
-  const series = await getSeriesById(id);
-  if (!series) {
+  // 2. Fetch primary series data
+  const series = await getSeriesById(seriesId);
+
+  // 3. Return 404 if record is not found or marked 'removed'
+  if (!series || series.visibility === 'removed') {
     notFound();
   }
 
-  // Canonical slug validation: permanent redirect if slug is missing or outdated
-  const expectedParam = `${series.id}-${series.slug}`;
-  if (slug !== expectedParam) {
+  // Canonical slug redirect if slug is outdated
+  const expectedSlug = `${series.id}-${series.slug}`;
+  if (slug !== expectedSlug) {
     permanentRedirect(titlePath(series));
   }
 
+  // 4. Fetch related series for recommendations
   const relatedSeries = await getRelatedSeries(series.id, 6);
+
   const firstTag = series.tags[0];
+  const originCountryName = series.originCountry ? getCountryName(series.originCountry) : null;
+  const originalLangName = getLanguageName(series.originalLanguage);
+
+  // Extract primary native alias
   const primaryOriginalAlias = series.aliases.find(
     (a) => a.language === series.originalLanguage
   );
-  const originalLangName = getLanguageName(series.originalLanguage);
-  const originCountryName = series.originCountry
-    ? getCountryName(series.originCountry)
-    : undefined;
 
-  // Check if releases have differing episode counts
-  const distinctEpisodeCounts = Array.from(
-    new Set(series.releases.map((r) => r.episodeCount).filter(Boolean))
-  );
-  const hasDifferingEpisodeCounts = distinctEpisodeCounts.length > 1;
-
-  // Cast and crew separation
   const castMembers = series.cast?.filter((c) => c.roleType === 'actor') || [];
   const crewMembers = series.cast?.filter((c) => c.roleType !== 'actor') || [];
 
-  // Structured Data (JSON-LD)
-  const allAliasTexts = series.aliases.map((a) => a.text);
-  const canonicalUrl = `${siteConfig.baseUrl}${titlePath(series)}`;
+  const episodeCounts = new Set(
+    series.releases.map((r) => r.episodeCount).filter(Boolean)
+  );
+  const hasDifferingEpisodeCounts = episodeCounts.size > 1;
 
-  const actors = series.cast
-    ?.filter((c) => c.roleType === 'actor')
-    .map((c) => ({
-      '@type': 'Person',
-      name: c.person.name,
-      url: `${siteConfig.baseUrl}${personPath(c.person)}`,
-    })) || [];
-
-  const directors = series.cast
-    ?.filter((c) => c.roleType === 'director')
-    .map((c) => ({
-      '@type': 'Person',
-      name: c.person.name,
-      url: `${siteConfig.baseUrl}${personPath(c.person)}`,
-    })) || [];
-
-  const creators = series.cast
-    ?.filter((c) => c.roleType === 'writer' || c.roleType === 'producer')
-    .map((c) => ({
-      '@type': 'Person',
-      name: c.person.name,
-      url: `${siteConfig.baseUrl}${personPath(c.person)}`,
-    })) || [];
-
+  // Schema.org Structured Data (TVEpisode / TVSeries)
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'TVSeries',
-        '@id': `${canonicalUrl}/#series`,
-        url: canonicalUrl,
-        name: series.title,
-        ...(allAliasTexts.length > 0 ? { alternateName: allAliasTexts } : {}),
-        ...(series.episodeCount ? { numberOfEpisodes: series.episodeCount } : {}),
-        ...(series.originalLanguage ? { inLanguage: series.originalLanguage } : {}),
-        ...(originCountryName
-          ? {
-              countryOfOrigin: {
-                '@type': 'Country',
-                name: originCountryName,
-              },
-            }
-          : {}),
-        ...(series.tags && series.tags.length > 0
-          ? { genre: series.tags.map((t) => t.name) }
-          : {}),
-        ...(series.year ? { datePublished: String(series.year) } : {}),
-        ...(series.synopsis ? { description: series.synopsis } : {}),
-        ...(actors.length > 0 ? { actor: actors } : {}),
-        ...(directors.length > 0 ? { director: directors } : {}),
-        ...(creators.length > 0 ? { creator: creators } : {}),
-        ...(series.ratingCount >= 10
-          ? {
-              aggregateRating: {
-                '@type': 'AggregateRating',
-                ratingValue: series.ratingScore,
-                ratingCount: series.ratingCount,
-                bestRating: 10,
-                worstRating: 1,
-              },
-            }
-          : {}),
+    '@type': 'TVSeries',
+    '@id': `${siteConfig.baseUrl}${titlePath(series)}`,
+    name: series.title,
+    description: series.synopsis,
+    numberOfEpisodes: series.episodeCount,
+    startDate: `${series.year}`,
+    inLanguage: series.originalLanguage,
+    ...(series.ratingScore > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: series.ratingScore,
+        bestRating: 10,
+        worstRating: 1,
+        ratingCount: series.ratingCount || 1,
       },
-      {
-        '@type': 'BreadcrumbList',
-        '@id': `${canonicalUrl}/#breadcrumb`,
-        itemListElement: [
-          {
-            '@type': 'ListItem',
-            position: 1,
-            name: 'Home',
-            item: siteConfig.baseUrl,
-          },
-          ...(firstTag
-            ? [
-                {
-                  '@type': 'ListItem',
-                  position: 2,
-                  name: `${firstTag.name} Short Dramas`,
-                  item: `${siteConfig.baseUrl}${tagPath(firstTag.slug)}`,
-                },
-                {
-                  '@type': 'ListItem',
-                  position: 3,
-                  name: series.title,
-                  item: canonicalUrl,
-                },
-              ]
-            : [
-                {
-                  '@type': 'ListItem',
-                  position: 2,
-                  name: series.title,
-                  item: canonicalUrl,
-                },
-              ]),
-        ],
-      },
-    ],
+    }),
+    ...(primaryOriginalAlias && {
+      alternateName: primaryOriginalAlias.text,
+    }),
+    genre: series.tags.map((t) => t.name),
   };
 
   return (
-    <div className="space-y-6 pb-16 text-left">
-      {/* Structured Data Script */}
+    <div className="space-y-6 pb-16 text-left max-w-4xl mx-auto">
+      {/* Structured Data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -293,300 +183,318 @@ export default async function TitlePage({ params }: TitlePageProps) {
         ]}
       />
 
-      {/* Main Layout: Below 1024px single column; From 1024px sticky 320px left column & right content column */}
-      <div className="flex flex-col lg:flex-row gap-5 sm:gap-6 lg:gap-10 items-start">
-        {/* Left Column (Desktop) / Contents (Mobile): Poster and TitleActions */}
-        <aside className="contents lg:block lg:w-[320px] lg:shrink-0 lg:sticky lg:top-20 lg:space-y-4">
-          <div className="order-1 lg:order-none w-24 sm:w-28 max-w-[112px] lg:max-w-none lg:w-full shrink-0">
-            <Poster
-              title={series.title}
-              year={series.year}
-              episodeCount={series.episodeCount}
-              priority={true}
-              className="w-full"
-            />
+      {/* 1. Header block at 390px: 96px poster beside the h1 (grid 96px 1fr) */}
+      <div className="grid grid-cols-[96px_1fr] sm:grid-cols-[112px_1fr] md:grid-cols-[128px_1fr] gap-4 sm:gap-6 items-start text-left">
+        {/* 96px Poster */}
+        <div className="w-24 sm:w-28 md:w-32 shrink-0 aspect-[9/16]">
+          <Poster
+            title={series.title}
+            src={series.posterUrl}
+            priority={true}
+            className="w-full h-full"
+          />
+        </div>
+
+        {/* Title, Original language, Romanization & Meta */}
+        <div className="space-y-2 min-w-0">
+          <h1 className="text-[20px] sm:text-[24px] lg:text-[28px] font-semibold text-[var(--ink)] leading-tight tracking-tight">
+            {series.title}
+          </h1>
+
+          <div className="space-y-0.5 text-[13px]">
+            {primaryOriginalAlias && (
+              <p className="text-[var(--ink)] font-normal">
+                <span className="text-[var(--muted)] text-[11px] mr-1.5">
+                  {originalLangName}:
+                </span>
+                <span lang={series.originalLanguage}>
+                  {primaryOriginalAlias.text}
+                </span>
+              </p>
+            )}
+
+            {series.romanizedTitle && (
+              <p className="text-[var(--muted)] text-[12px]">
+                <span className="mr-1.5">Romanized:</span>
+                <span>{series.romanizedTitle}</span>
+              </p>
+            )}
           </div>
-          <div className="order-3 lg:order-none w-full">
-            <TitleActions series={series} />
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[var(--muted)] tabular-nums pt-1 border-t border-[var(--line)]">
+            <span className="font-semibold text-[var(--ink)]">{series.year}</span>
+            {originCountryName && <span>{originCountryName}</span>}
+            <span>{series.episodeCount} eps</span>
+            {series.avgEpisodeMinutes ? (
+              <span>{series.avgEpisodeMinutes} min/ep</span>
+            ) : null}
+            {series.productionStatus && (
+              <span className="capitalize">{series.productionStatus}</span>
+            )}
           </div>
-        </aside>
+        </div>
+      </div>
 
-        {/* Right Column (Desktop) / Contents (Mobile): title block, synopsis, tags, then sections */}
-        <div className="contents lg:block lg:flex-1 lg:min-w-0 lg:w-full lg:space-y-8">
-          {/* Title Header Block */}
-          <div className="order-2 lg:order-none w-full space-y-2 lg:space-y-3">
-            <h1 className="text-[22px] sm:text-[26px] lg:text-[32px] font-semibold text-[var(--ink)] tracking-tight leading-tight">
-              {series.title}
-            </h1>
+      {/* 2. Actions row: "Add to list" primary, "Rate" and "Report a problem" secondary */}
+      <div className="w-full pt-1">
+        <TitleActions series={series} />
+      </div>
 
-            <div className="space-y-0.5 text-[13px] lg:text-[14px]">
-              {primaryOriginalAlias && (
-                <p className="text-[var(--ink)] font-normal">
-                  <span className="text-[var(--muted)] text-[11px] lg:text-[12px] mr-1.5">{originalLangName}:</span>
-                  <span lang={series.originalLanguage}>{primaryOriginalAlias.text}</span>
-                </p>
-              )}
+      {/* 3. Synopsis */}
+      <div className="w-full pt-2 border-t border-[var(--line)]">
+        <SynopsisExpand synopsis={series.synopsis} />
+      </div>
 
-              {series.romanizedTitle && (
-                <p className="text-[var(--muted)] text-[11px] lg:text-[12px]">
-                  <span className="mr-1.5">Romanized:</span>
-                  <span>{series.romanizedTitle}</span>
-                </p>
-              )}
+      {/* 4. Tags as text links */}
+      {series.tags && series.tags.length > 0 && (
+        <div className="w-full pt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-[var(--muted)]">
+          <span>Tags:</span>
+          {series.tags.map((tag) => (
+            <Link
+              key={tag.slug}
+              href={tagPath(tag.slug)}
+              className="text-[var(--ink)] hover:text-[var(--crimson)] hover:underline"
+            >
+              {tag.name}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* 5. "Also known as" Ledger */}
+      <section id="names" className="w-full scroll-mt-16 pt-2">
+        <AliasLedger series={series} />
+      </section>
+
+      {/* 6. "Where to watch" */}
+      <section id="watch" className="w-full scroll-mt-16 pt-2">
+        <WhereToWatch series={series} />
+      </section>
+
+      {/* 7. <details> block for Versions */}
+      {series.releases && series.releases.length > 0 && (
+        <details
+          id="versions"
+          className="group border border-[var(--line)] rounded-[12px] p-4 bg-[var(--surface)] text-left [&_summary::-webkit-details-marker]:hidden"
+        >
+          <summary className="font-semibold text-[16px] text-[var(--ink)] cursor-pointer flex items-center justify-between select-none">
+            <span>Versions ({series.releases.length})</span>
+            <ChevronDown className="w-4 h-4 text-[var(--muted)] transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="pt-3 border-t border-[var(--line)] mt-3 space-y-3">
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left border-collapse text-[13px]">
+                <thead>
+                  <tr className="border-b border-[var(--line)] text-[12px] font-semibold text-[var(--muted)]">
+                    <th scope="col" className="py-2.5 pr-4 pl-1 font-semibold">
+                      Language
+                    </th>
+                    <th scope="col" className="py-2.5 px-3 font-semibold">
+                      Episodes
+                    </th>
+                    <th scope="col" className="py-2.5 px-3 font-semibold">
+                      Platform
+                    </th>
+                    <th scope="col" className="py-2.5 pl-3 pr-1 font-semibold text-right sm:text-left">
+                      Year
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--line)]">
+                  {series.releases.map((release, idx) => {
+                    const langDisplay = release.dubLanguage
+                      ? getLanguageName(release.dubLanguage)
+                      : 'Original';
+                    const epCount = release.episodeCount || series.episodeCount;
+                    const relYear = release.releasedYear || series.year;
+
+                    return (
+                      <tr
+                        key={release.id || idx}
+                        className="hover:bg-[var(--surface-hover)] transition-colors"
+                      >
+                        <td className="py-3 pr-4 pl-1 align-middle font-medium text-[var(--ink)]">
+                          {langDisplay}
+                        </td>
+                        <td className="py-3 px-3 align-middle tabular-nums text-[var(--ink)]">
+                          {epCount} eps
+                        </td>
+                        <td className="py-3 px-3 align-middle text-[var(--muted)]">
+                          {release.platform}
+                        </td>
+                        <td className="py-3 pl-3 pr-1 align-middle tabular-nums text-[var(--muted)] text-right sm:text-left">
+                          {relYear}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-3 lg:gap-x-4 gap-y-1 text-[12px] lg:text-[14px] text-[var(--muted)] pt-1 border-t border-[var(--line)]">
-              <span className="tabular-nums font-semibold text-[var(--ink)]">{series.year}</span>
-              {originCountryName && <span>{originCountryName}</span>}
-              <span className="tabular-nums">{series.episodeCount} episodes</span>
-              {series.avgEpisodeMinutes ? (
-                <span className="tabular-nums">{series.avgEpisodeMinutes} min per episode</span>
-              ) : null}
-              {series.productionStatus && (
-                <span className="capitalize">{series.productionStatus}</span>
+            {hasDifferingEpisodeCounts && (
+              <p className="text-[13px] text-[var(--muted)] pt-1">
+                Episode counts differ between versions.
+              </p>
+            )}
+          </div>
+        </details>
+      )}
+
+      {/* 8. <details> block for Cast and crew */}
+      {series.cast && series.cast.length > 0 && (
+        <details
+          id="cast"
+          className="group border border-[var(--line)] rounded-[12px] p-4 bg-[var(--surface)] text-left [&_summary::-webkit-details-marker]:hidden"
+        >
+          <summary className="font-semibold text-[16px] text-[var(--ink)] cursor-pointer flex items-center justify-between select-none">
+            <span>Cast and crew ({series.cast.length})</span>
+            <ChevronDown className="w-4 h-4 text-[var(--muted)] transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="pt-3 border-t border-[var(--line)] mt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {castMembers.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-[12px] font-semibold text-[var(--muted)]">
+                    Cast
+                  </h3>
+                  <ul className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
+                    {castMembers.map((c, i) => (
+                      <li
+                        key={i}
+                        className="py-2.5 flex items-baseline justify-between gap-3 text-[14px]"
+                      >
+                        <Link
+                          href={personPath(c.person)}
+                          className="font-medium text-[var(--ink)] hover:text-[var(--crimson)] hover:underline"
+                        >
+                          {c.person.name}
+                        </Link>
+                        <span className="text-[13px] text-[var(--muted)] text-right">
+                          {c.characterName ? `as ${c.characterName}` : 'Actor'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {crewMembers.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-[12px] font-semibold text-[var(--muted)]">
+                    Crew
+                  </h3>
+                  <ul className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
+                    {crewMembers.map((c, i) => (
+                      <li
+                        key={i}
+                        className="py-2.5 flex items-baseline justify-between gap-3 text-[14px]"
+                      >
+                        <Link
+                          href={personPath(c.person)}
+                          className="font-medium text-[var(--ink)] hover:text-[var(--crimson)] hover:underline"
+                        >
+                          {c.person.name}
+                        </Link>
+                        <span className="text-[13px] text-[var(--muted)] text-right capitalize">
+                          {c.roleType}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           </div>
+        </details>
+      )}
 
-          {/* Synopsis */}
-          <div className="order-4 lg:order-none w-full pt-3 border-t border-[var(--line)]">
-            <SynopsisExpand synopsis={series.synopsis} />
-          </div>
+      {/* 9. <details> block for Community */}
+      <details
+        id="community"
+        className="group border border-[var(--line)] rounded-[12px] p-4 bg-[var(--surface)] text-left [&_summary::-webkit-details-marker]:hidden"
+      >
+        <summary className="font-semibold text-[16px] text-[var(--ink)] cursor-pointer flex items-center justify-between select-none">
+          <span>
+            Community ({series.ratingScore > 0 ? `${series.ratingScore.toFixed(1)}/10` : 'Stats'})
+          </span>
+          <ChevronDown className="w-4 h-4 text-[var(--muted)] transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="pt-3 border-t border-[var(--line)] mt-3">
+          <CommunityStats
+            score={series.ratingScore}
+            ratingCount={series.ratingCount}
+            popularity={series.popularity}
+          />
+        </div>
+      </details>
 
-          {/* Tags */}
-          {series.tags && series.tags.length > 0 && (
-            <div className="order-5 lg:order-none w-full pt-1 flex flex-wrap gap-1.5 items-center">
-              <span className="text-[12px] text-[var(--muted)] mr-1">Tags:</span>
-              {series.tags.map((tag) => (
-                <Link key={tag.slug} href={tagPath(tag.slug)}>
-                  <Tag size="sm" variant="subtle">
-                    {tag.name}
-                  </Tag>
+      {/* 10. <details> block for Similar short dramas */}
+      <details
+        id="similar"
+        className="group border border-[var(--line)] rounded-[12px] p-4 bg-[var(--surface)] text-left [&_summary::-webkit-details-marker]:hidden"
+      >
+        <summary className="font-semibold text-[16px] text-[var(--ink)] cursor-pointer flex items-center justify-between select-none">
+          <span>Similar short dramas ({relatedSeries.length})</span>
+          <ChevronDown className="w-4 h-4 text-[var(--muted)] transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="pt-4 border-t border-[var(--line)] mt-3 space-y-4">
+          {relatedSeries.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+              {relatedSeries.map((rel) => (
+                <Link
+                  key={rel.id}
+                  href={titlePath(rel)}
+                  className="group/item flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crimson)] rounded-[12px] text-left"
+                >
+                  <div className="mb-2">
+                    <Poster
+                      title={rel.title}
+                      src={rel.posterUrl}
+                      className="group-hover/item:border-[var(--line-strong)] transition-colors"
+                    />
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <h3 className="text-[14px] font-semibold text-[var(--ink)] leading-snug line-clamp-2 group-hover/item:text-[var(--crimson)] transition-colors">
+                      {rel.title}
+                    </h3>
+                    <div className="flex items-center gap-2 text-[12px] text-[var(--muted)] tabular-nums mt-1">
+                      <span>{rel.year}</span>
+                      <span>{rel.episodeCount} eps</span>
+                      {rel.ratingScore > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[var(--ink)] font-semibold">
+                          <Star className="w-3 h-3 fill-[var(--crimson)] text-[var(--crimson)] shrink-0" />
+                          {rel.ratingScore.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </Link>
               ))}
             </div>
+          ) : (
+            <p className="text-[13px] text-[var(--muted)]">
+              No similar short dramas indexed yet.
+            </p>
           )}
 
-          {/* In-Page Quick Nav Sticky Bar */}
-          <div className="order-6 lg:order-none w-full">
-            <TitleNav />
-          </div>
-
-          {/* Section 1: Names ("Also Known As" Ledger) */}
-          <section id="names" className="order-7 lg:order-none w-full scroll-mt-16">
-            <AliasLedger series={series} />
-          </section>
-
-          {/* Section 2: Where to Watch */}
-          <section id="watch" className="order-8 lg:order-none w-full scroll-mt-16">
-            <WhereToWatch series={series} />
-          </section>
-
-          {/* Section 3: Versions */}
-          {series.releases && series.releases.length > 0 && (
-            <section id="versions" className="order-9 lg:order-none w-full scroll-mt-16 space-y-3">
-              <div className="border-b border-[var(--line)] pb-2.5">
-                <h2 className="text-[17px] sm:text-[18px] font-semibold text-[var(--ink)]">
-                  Versions
-                </h2>
-                <p className="text-[13px] text-[var(--muted)] mt-0.5">
-                  Release variations, dub languages, and episode count formats
-                </p>
-              </div>
-
-              <div className="w-full overflow-x-auto">
-                <table className="w-full text-left border-collapse text-[13px]">
-                  <thead>
-                    <tr className="border-b border-[var(--line)] text-[12px] font-semibold text-[var(--muted)]">
-                      <th scope="col" className="py-2.5 pr-4 pl-1 font-semibold">
-                        Language
-                      </th>
-                      <th scope="col" className="py-2.5 px-3 font-semibold">
-                        Episodes
-                      </th>
-                      <th scope="col" className="py-2.5 px-3 font-semibold">
-                        Platform
-                      </th>
-                      <th scope="col" className="py-2.5 pl-3 pr-1 font-semibold text-right sm:text-left">
-                        Year
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--line)]">
-                    {series.releases.map((release, idx) => {
-                      const langDisplay = release.dubLanguage
-                        ? getLanguageName(release.dubLanguage)
-                        : 'Original';
-                      const epCount = release.episodeCount || series.episodeCount;
-                      const relYear = release.releasedYear || series.year;
-
-                      return (
-                        <tr
-                          key={release.id || idx}
-                          className="hover:bg-[var(--surface-hover)] transition-colors"
-                        >
-                          <td className="py-3 pr-4 pl-1 align-middle font-medium text-[var(--ink)]">
-                            {langDisplay}
-                          </td>
-                          <td className="py-3 px-3 align-middle tabular-nums text-[var(--ink)]">
-                            {epCount} eps
-                          </td>
-                          <td className="py-3 px-3 align-middle text-[var(--muted)]">
-                            {release.platform}
-                          </td>
-                          <td className="py-3 pl-3 pr-1 align-middle tabular-nums text-[var(--muted)] text-right sm:text-left">
-                            {relYear}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {hasDifferingEpisodeCounts && (
-                <p className="text-[13px] text-[var(--muted)] pt-1">
-                  Episode counts differ between versions.
-                </p>
-              )}
-            </section>
-          )}
-
-          {/* Section 4: Cast and Crew */}
-          {series.cast && series.cast.length > 0 && (
-            <section id="cast" className="order-10 lg:order-none w-full scroll-mt-16 space-y-6">
-              <div className="border-b border-[var(--line)] pb-2.5">
-                <h2 className="text-[17px] sm:text-[18px] font-semibold text-[var(--ink)]">
-                  Cast and crew
-                </h2>
-                <p className="text-[13px] text-[var(--muted)] mt-0.5">
-                  Verified creative team and on-screen performers
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {castMembers.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-[12px] font-semibold text-[var(--muted)]">
-                      Cast
-                    </h3>
-                    <ul className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
-                      {castMembers.map((c, i) => (
-                        <li
-                          key={i}
-                          className="py-2.5 flex items-baseline justify-between gap-3 text-[14px]"
-                        >
-                          <Link
-                            href={personPath(c.person)}
-                            className="font-medium text-[var(--ink)] hover:text-[var(--crimson)] hover:underline"
-                          >
-                            {c.person.name}
-                          </Link>
-                          <span className="text-[13px] text-[var(--muted)] text-right">
-                            {c.characterName ? `as ${c.characterName}` : 'Actor'}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {crewMembers.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-[12px] font-semibold text-[var(--muted)]">
-                      Crew
-                    </h3>
-                    <ul className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
-                      {crewMembers.map((c, i) => (
-                        <li
-                          key={i}
-                          className="py-2.5 flex items-baseline justify-between gap-3 text-[14px]"
-                        >
-                          <Link
-                            href={personPath(c.person)}
-                            className="font-medium text-[var(--ink)] hover:text-[var(--crimson)] hover:underline"
-                          >
-                            {c.person.name}
-                          </Link>
-                          <span className="text-[13px] text-[var(--muted)] text-right capitalize">
-                            {c.roleType}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Section 5: Community Stats */}
-          <section id="community" className="order-11 lg:order-none w-full scroll-mt-16">
-            <CommunityStats
-              score={series.ratingScore}
-              ratingCount={series.ratingCount}
-              popularity={series.popularity}
-            />
-          </section>
-
-          {/* Section 6: Similar Short Dramas */}
-          <section className="order-12 lg:order-none w-full space-y-3">
-            <div className="border-b border-[var(--line)] pb-2 flex items-center justify-between">
-              <div>
-                <h2 className="text-[17px] sm:text-[18px] font-semibold text-[var(--ink)]">
-                  Similar short dramas
-                </h2>
-                <p className="text-[13px] text-[var(--muted)] mt-0.5">
-                  Titles sharing genres, themes, and formats
-                </p>
-              </div>
-              {firstTag && (
-                <Link
-                  href={tagPath(firstTag.slug)}
-                  className="text-[12px] text-[var(--muted)] hover:text-[var(--crimson)] transition-colors"
-                >
-                  More {firstTag.name}
-                </Link>
-              )}
+          {/* 7. "More Revenge" becomes a crimson link "All revenge titles" on its own row */}
+          {firstTag && (
+            <div className="pt-2 border-t border-[var(--line)]">
+              <Link
+                href={tagPath(firstTag.slug)}
+                className="text-[13px] font-semibold text-[var(--crimson)] hover:underline inline-block"
+              >
+                All {firstTag.name.toLowerCase()} titles
+              </Link>
             </div>
-
-            {relatedSeries.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {relatedSeries.map((rel) => (
-                  <Link
-                    key={rel.id}
-                    href={titlePath(rel)}
-                    className="group flex flex-col space-y-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crimson)] rounded-[8px]"
-                  >
-                    <Poster
-                      title={rel.title}
-                      year={rel.year}
-                      episodeCount={rel.episodeCount}
-                      className="group-hover:border-[var(--line-strong)]"
-                    />
-                    <div className="space-y-0.5">
-                      <h3 className="font-semibold text-[12px] text-[var(--ink)] line-clamp-2 leading-snug group-hover:text-[var(--crimson)] transition-colors">
-                        {rel.title}
-                      </h3>
-                      <span className="text-[11px] text-[var(--muted)] tabular-nums">
-                        {rel.episodeCount} eps
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[13px] text-[var(--muted)]">
-                No similar short dramas indexed yet.
-              </p>
-            )}
-          </section>
-
-          {/* Title Footer History and Report Links */}
-          <div className="order-13 lg:order-none w-full">
-            <TitleFooterHistory series={series} />
-          </div>
+          )}
         </div>
+      </details>
+
+      {/* 11. Title Footer History */}
+      <div className="w-full pt-2">
+        <TitleFooterHistory series={series} />
       </div>
     </div>
   );

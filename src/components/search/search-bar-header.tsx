@@ -7,6 +7,7 @@ import { Dialog } from '@/src/components/ui/dialog';
 import { Select } from '@/src/components/ui/select';
 import { SearchFilters } from './search-filters';
 import { Platform, Tag } from '@/src/data/types';
+import { SEARCH_PLACEHOLDER } from '@/src/config/site';
 import { Search, SlidersHorizontal, Link as LinkIcon, X } from 'lucide-react';
 
 interface SearchBarHeaderProps {
@@ -86,7 +87,7 @@ export function SearchBarHeader({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by title, Chinese (中文) alias, or paste a link..."
+            placeholder={SEARCH_PLACEHOLDER}
             className="w-full h-11 pl-9 pr-8 text-[14px] bg-[var(--surface)] text-[var(--ink)] placeholder:text-[var(--muted)] rounded-[8px] border border-[var(--line)] hover:border-[var(--line-strong)] focus:border-[var(--crimson)] outline-none transition-colors"
           />
           {query && (
@@ -126,68 +127,48 @@ export function SearchBarHeader({
         </Button>
       </form>
 
-      {/* Query Status Bar & Sort controls */}
-      <div className="flex items-center justify-between gap-2 pt-1">
-        {/* Results count & Active filters info */}
-        <div className="text-[13px] text-[var(--muted)]">
-          {initialQuery ? (
-            <span>
-              <strong className="text-[var(--ink)] tabular-nums font-semibold">
-                {totalResults}
-              </strong>{' '}
-              {totalResults === 1 ? 'result' : 'results'} for &ldquo;
-              <span className="text-[var(--ink)] font-medium">{initialQuery}</span>
-              &rdquo;
-            </span>
-          ) : (
-            <span>
-              Showing{' '}
-              <strong className="text-[var(--ink)] tabular-nums font-semibold">
-                {totalResults}
-              </strong>{' '}
-              short dramas
-            </span>
-          )}
+      {/* Search count on its own line */}
+      <div className="text-[13px] text-[var(--muted)] pt-1">
+        Showing <strong className="text-[var(--ink)] tabular-nums font-semibold">{totalResults}</strong> {totalResults === 1 ? 'short drama' : 'short dramas'}
+      </div>
+
+      {/* Controls row: Filters button & Sort select */}
+      <div className="flex items-center justify-between gap-2.5">
+        {/* Mobile Filters button */}
+        <div className="lg:hidden">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setMobileFiltersOpen(true)}
+            leftIcon={<SlidersHorizontal className="w-3.5 h-3.5" />}
+            className="relative"
+          >
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-[var(--crimson)] text-white text-[10px] font-bold flex items-center justify-center -mr-1">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
         </div>
 
-        {/* Right: Mobile Filters button & Desktop Sort dropdown */}
-        <div className="flex items-center gap-2.5">
-          {/* Mobile Filters button */}
-          <div className="lg:hidden">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setMobileFiltersOpen(true)}
-              leftIcon={<SlidersHorizontal className="w-3.5 h-3.5" />}
-              className="relative"
-            >
-              <span>Filters</span>
-              {activeFilterCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-[var(--crimson)] text-white text-[10px] font-bold flex items-center justify-center -mr-1">
-                  {activeFilterCount}
-                </span>
-              )}
-            </Button>
-          </div>
-
-          {/* Sort Selector */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-[12px] text-[var(--muted)] hidden sm:inline">
-              Sort:
-            </span>
-            <div className="w-32 sm:w-36">
-              <Select
-                value={currentSort}
-                onChange={(e) => handleSortChange(e.target.value)}
-                options={[
-                  { value: 'relevance', label: 'Best match' },
-                  { value: 'popularity', label: 'Popular' },
-                  { value: 'newest', label: 'Newest' },
-                  { value: 'rating', label: 'Highest rated' },
-                ]}
-                className="h-8 text-[12px]"
-              />
-            </div>
+        {/* Desktop / Mobile Sort Selector */}
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+          <span className="text-[12px] text-[var(--muted)] hidden sm:inline">
+            Sort:
+          </span>
+          <div className="w-32 sm:w-36">
+            <Select
+              value={currentSort}
+              onChange={(e) => handleSortChange(e.target.value)}
+              options={[
+                { value: 'relevance', label: 'Best match' },
+                { value: 'popularity', label: 'Popular' },
+                { value: 'newest', label: 'Newest' },
+                { value: 'rating', label: 'Highest rated' },
+              ]}
+              className="h-8 text-[12px]"
+            />
           </div>
         </div>
       </div>
@@ -196,38 +177,56 @@ export function SearchBarHeader({
       <Dialog
         open={mobileFiltersOpen}
         onClose={() => setMobileFiltersOpen(false)}
-        title="Filter Results"
-        description="Filter by platform, language, episode count and tags."
+        title="Filter results"
         footer={
-          <Button
-            variant="primary"
-            size="md"
-            fullWidth
-            onClick={() => setMobileFiltersOpen(false)}
-          >
-            Apply filters
-          </Button>
+          <div className="flex items-center justify-between w-full">
+            <Button
+              variant="quiet"
+              size="sm"
+              onClick={() => {
+                const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
+                params.delete('platform');
+                params.delete('lang');
+                params.delete('tag');
+                params.delete('year');
+                params.delete('status');
+                params.delete('episodes');
+                params.delete('page');
+                router.push(`${pathname}?${params.toString()}`);
+                setMobileFiltersOpen(false);
+              }}
+            >
+              Clear filters
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setMobileFiltersOpen(false)}
+            >
+              Show results
+            </Button>
+          </div>
         }
       >
         <SearchFilters
           platforms={platforms}
           tags={tags}
           onApply={() => setMobileFiltersOpen(false)}
+          hideHeader={true}
         />
       </Dialog>
 
-      {/* Paste a link Modal */}
+      {/* Paste a link Modal / Bottom Sheet */}
       <Dialog
         open={pasteLinkOpen}
         onClose={() => setPasteLinkOpen(false)}
-        title="Find by watch link"
-        description="Paste a URL from any platform (YouTube, Lumen TV, Reelway, etc.) to look up the short drama."
+        title="Paste a link"
         maxWidth="md"
       >
         <form onSubmit={handlePasteLinkSubmit} className="space-y-4 text-left">
           <div className="space-y-1.5">
             <label className="text-[13px] font-medium text-[var(--ink)] block">
-              Watch Link URL
+              Watch link URL
             </label>
             <input
               type="url"
@@ -235,7 +234,7 @@ export function SearchBarHeader({
               onChange={(e) => setPasteLinkInput(e.target.value)}
               placeholder="https://example.com/lumentv/series/101"
               required
-              className="w-full h-10 px-3 text-[14px] bg-[var(--surface)] text-[var(--ink)] placeholder:text-[var(--muted)] rounded-[8px] border border-[var(--line)] focus:border-[var(--crimson)] outline-none"
+              className="w-full min-w-0 h-10 px-3 text-[14px] bg-[var(--surface)] text-[var(--ink)] placeholder:text-[var(--muted)] rounded-[8px] border border-[var(--line)] hover:border-[var(--line-strong)] focus:outline-2 focus:outline-[var(--crimson)] focus:outline-offset-0 outline-none transition-colors"
             />
           </div>
 
@@ -254,7 +253,7 @@ export function SearchBarHeader({
             </div>
 
             <Button type="submit" variant="primary" size="sm">
-              Search link
+              Look up link
             </Button>
           </div>
         </form>

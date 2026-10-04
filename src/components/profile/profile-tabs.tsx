@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { UserProfileData } from '@/src/data/types';
 import { titlePath } from '@/src/lib/urls';
+import { useSession } from '@/src/context/session-context';
 import { UserListView } from './user-list-view';
 import { StatusMark } from '@/src/components/ui/status-mark';
 import { EmptyState } from '@/src/components/ui/empty-state';
@@ -14,7 +15,9 @@ interface ProfileTabsProps {
   isOwner?: boolean;
 }
 
-export function ProfileTabs({ profileData, isOwner = true }: ProfileTabsProps) {
+export function ProfileTabs({ profileData, isOwner: isOwnerProp }: ProfileTabsProps) {
+  const { user: currentUser } = useSession();
+  const isOwner = isOwnerProp !== undefined ? isOwnerProp : currentUser?.id === profileData.user.id;
   const [activeTab, setActiveTab] = useState<'lists' | 'ratings' | 'contributions' | 'reports'>('lists');
 
   const { listEntries, ratings, contributions, reports } = profileData;

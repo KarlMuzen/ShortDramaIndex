@@ -16,7 +16,7 @@ interface AliasLedgerProps {
 }
 
 export function AliasLedger({ series }: AliasLedgerProps) {
-  const { aliases, title } = series;
+  const { aliases } = series;
   const { showToast } = useToast();
   const [showAll, setShowAll] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -28,6 +28,7 @@ export function AliasLedger({ series }: AliasLedgerProps) {
 
   const initialLimit = 6;
   const hasMore = aliases.length > initialLimit;
+  const displayedAliases = showAll ? aliases : aliases.slice(0, initialLimit);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -55,148 +56,128 @@ export function AliasLedger({ series }: AliasLedgerProps) {
   };
 
   return (
-    <div className="space-y-4 text-left">
-      {/* Section Header */}
-      <div className="flex items-baseline justify-between border-b border-[var(--line)] pb-2.5">
+    <div className="space-y-3.5 text-left w-full">
+      {/* Heading Row: Title, Subtitle & No-wrap "Report a name" button */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-[var(--line)] pb-3">
         <div>
-          <h2 className="text-[17px] sm:text-[18px] font-semibold text-[var(--ink)]">
+          <h2 className="text-[18px] sm:text-[20px] font-semibold text-[var(--ink)]">
             Also known as
           </h2>
           <p className="text-[13px] text-[var(--muted)] mt-0.5">
-            Verified alternate titles, localized releases, and community translations
+            Every known name, with its source and review state.
           </p>
         </div>
 
         <Button
-          variant="quiet"
+          variant="secondary"
           size="sm"
           onClick={handleOpenReportAName}
           leftIcon={<Plus className="w-3.5 h-3.5" />}
-          className="text-[var(--crimson)] hover:text-[var(--crimson-hover)]"
+          className="whitespace-nowrap shrink-0 self-start sm:self-center"
         >
           Report a name
         </Button>
       </div>
 
-      {/* Ledger Table Container */}
-      <div className="w-full overflow-x-auto">
-        <table className="w-full text-left border-collapse text-[13px]">
-          <thead>
-            <tr className="border-b border-[var(--line)] text-[12px] font-semibold text-[var(--muted)]">
-              <th scope="col" className="py-2.5 pr-4 pl-1 font-semibold w-2/5 sm:w-1/3">
-                Name
-              </th>
-              <th scope="col" className="py-2.5 px-3 font-semibold w-24">
-                Language
-              </th>
-              <th scope="col" className="py-2.5 px-3 font-semibold hidden md:table-cell">
-                Source
-              </th>
-              <th scope="col" className="py-2.5 px-3 font-semibold w-28">
-                State
-              </th>
-              <th scope="col" className="py-2.5 pl-3 pr-1 text-right w-16">
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--line)]">
-            {aliases.map((item, index) => {
-              const rowId = `alias-${index}`;
-              const isHidden = !showAll && index >= initialLimit;
-              const langName = getLanguageName(item.language);
+      {/* List Rows (No table, no sideways scroll) */}
+      <div className="divide-y divide-[var(--line)] border-y border-[var(--line)] w-full">
+        {displayedAliases.map((item, index) => {
+          const rowId = `alias-${index}`;
+          const langName = getLanguageName(item.language);
 
-              return (
-                <tr
-                  key={index}
-                  className={`hover:bg-[var(--surface-hover)] transition-colors group ${
-                    isHidden ? 'hidden' : ''
-                  }`}
-                >
-                  {/* Name Column with lang attribute */}
-                  <td className="py-3 pr-4 pl-1 align-middle">
-                    <span
-                      lang={item.language}
-                      className="font-medium text-[14px] text-[var(--ink)] break-words leading-snug block select-text"
-                    >
-                      {item.text}
-                    </span>
-                    {item.notes && (
-                      <span className="text-[11px] text-[var(--muted)] block mt-0.5">
-                        {item.notes}
-                      </span>
+          return (
+            <div
+              key={index}
+              className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-[var(--surface-hover)] transition-colors rounded-[8px] px-1"
+            >
+              {/* Left Column: Name (16px 600) + Muted second line (Lang, Code, Source) */}
+              <div className="space-y-0.5 min-w-0 flex-1">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span
+                    lang={item.language}
+                    className="text-[16px] font-semibold text-[var(--ink)] break-words leading-snug select-text"
+                  >
+                    {item.text}
+                  </span>
+                </div>
+
+                <div className="text-[12px] text-[var(--muted)] flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span>
+                    {langName} [{item.language}]
+                  </span>
+                  <span>•</span>
+                  <span>
+                    {item.sourceUrl ? (
+                      <a
+                        href={item.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="hover:text-[var(--crimson)] hover:underline"
+                      >
+                        {item.source}
+                      </a>
+                    ) : (
+                      <span>{item.source}</span>
                     )}
-                  </td>
+                  </span>
+                  {item.notes && (
+                    <>
+                      <span>•</span>
+                      <span className="italic">{item.notes}</span>
+                    </>
+                  )}
+                </div>
+              </div>
 
-                  {/* Language Column */}
-                  <td className="py-3 px-3 align-middle text-[var(--muted)] whitespace-nowrap">
-                    <span>{langName}</span>
-                    <span className="text-[11px] text-[var(--muted)] uppercase ml-1 block sm:inline">
-                      [{item.language}]
-                    </span>
-                  </td>
+              {/* Right Column: State Badge + Copy / More actions */}
+              <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                <StatusMark status={item.status} size="sm" />
 
-                  {/* Source Column */}
-                  <td className="py-3 px-3 align-middle text-[var(--muted)] hidden md:table-cell text-[12px]">
-                    <span className="truncate max-w-xs block">{item.source}</span>
-                  </td>
+                <div className="flex items-center gap-0.5">
+                  <IconButton
+                    size="sm"
+                    aria-label={`Copy name: ${item.text}`}
+                    onClick={() => handleCopy(item.text, rowId)}
+                    title="Copy name"
+                  >
+                    {copiedId === rowId ? (
+                      <Check className="w-3.5 h-3.5 text-[var(--status-verified)]" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-[var(--muted)]" />
+                    )}
+                  </IconButton>
 
-                  {/* Verification State */}
-                  <td className="py-3 px-3 align-middle whitespace-nowrap">
-                    <StatusMark status={item.status} size="sm" />
-                  </td>
-
-                  {/* Row Actions: Copy & Overflow Menu */}
-                  <td className="py-3 pl-3 pr-1 align-middle text-right whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1">
+                  <Menu
+                    align="right"
+                    trigger={
                       <IconButton
                         size="sm"
-                        aria-label={`Copy name: ${item.text}`}
-                        onClick={() => handleCopy(item.text, rowId)}
-                        className="opacity-70 group-hover:opacity-100"
-                        title="Copy name"
+                        aria-label="More actions"
                       >
-                        {copiedId === rowId ? (
-                          <Check className="w-3.5 h-3.5 text-[var(--status-verified)]" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
+                        <MoreHorizontal className="w-3.5 h-3.5 text-[var(--muted)]" />
                       </IconButton>
-
-                      <Menu
-                        align="right"
-                        trigger={
-                          <IconButton
-                            size="sm"
-                            aria-label="More actions"
-                            className="opacity-70 group-hover:opacity-100"
-                          >
-                            <MoreHorizontal className="w-3.5 h-3.5" />
-                          </IconButton>
-                        }
-                      >
-                        <MenuItem
-                          icon={<Copy className="w-3.5 h-3.5" />}
-                          onClick={() => handleCopy(item.text, rowId)}
-                        >
-                          Copy name
-                        </MenuItem>
-                        <MenuDivider />
-                        <MenuItem
-                          icon={<Flag className="w-3.5 h-3.5" />}
-                          variant="danger"
-                          onClick={() => handleOpenReportWrong(item)}
-                        >
-                          Report as wrong
-                        </MenuItem>
-                      </Menu>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    }
+                  >
+                    <MenuItem
+                      icon={<Copy className="w-3.5 h-3.5" />}
+                      onClick={() => handleCopy(item.text, rowId)}
+                    >
+                      Copy name
+                    </MenuItem>
+                    <MenuDivider />
+                    <MenuItem
+                      icon={<Flag className="w-3.5 h-3.5" />}
+                      variant="danger"
+                      onClick={() => handleOpenReportWrong(item)}
+                    >
+                      Report as wrong
+                    </MenuItem>
+                  </Menu>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Show all N names control */}
@@ -217,6 +198,7 @@ export function AliasLedger({ series }: AliasLedgerProps) {
         open={reportSheetOpen}
         onClose={() => setReportSheetOpen(false)}
         series={series}
+        entry="name"
         initialType={reportType}
         targetAlias={reportTargetAlias}
       />

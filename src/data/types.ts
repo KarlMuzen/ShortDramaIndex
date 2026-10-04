@@ -22,6 +22,7 @@ export interface Alias {
   language: string; // ISO code: 'zh', 'en', 'ko', 'ja', 'es', etc.
   script?: string; // 'Hans', 'Hant', 'Latn', 'Hang', etc.
   source: string; // e.g. 'Official Uploader', 'Lumen TV app', 'Fan Translation'
+  sourceUrl?: string; // e.g. 'https://example.com/source'
   status: VerificationStatus;
   addedBy: string;
   addedAt: string;

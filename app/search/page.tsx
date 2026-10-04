@@ -109,16 +109,18 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <LinkLookupView lookupResult={searchResult.urlLookupResult} />
           ) : searchResult.items.length > 0 ? (
             /* Regular Results List */
-            <div className="space-y-3">
+            <div className="border-t border-[var(--line)]">
               {searchResult.items.map((item) => (
                 <SearchResultRow key={item.series.id} item={item} />
               ))}
 
               {/* Pagination */}
-              <SearchPagination
-                currentPage={searchResult.page}
-                totalPages={searchResult.totalPages}
-              />
+              <div className="pt-6">
+                <SearchPagination
+                  currentPage={searchResult.page}
+                  totalPages={searchResult.totalPages}
+                />
+              </div>
             </div>
           ) : (
             /* No Results State */

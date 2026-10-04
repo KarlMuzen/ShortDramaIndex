@@ -3,9 +3,7 @@ import Link from 'next/link';
 import { SearchResultItem } from '@/src/data/types';
 import { titlePath } from '@/src/lib/urls';
 import { Poster } from '@/src/components/ui/poster';
-import { Tag } from '@/src/components/ui/tag';
-import { StatusMark } from '@/src/components/ui/status-mark';
-import { Tv, ExternalLink } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 interface SearchResultRowProps {
   item: SearchResultItem;
@@ -15,95 +13,84 @@ export function SearchResultRow({ item }: SearchResultRowProps) {
   const { series, matchedAlias } = item;
   const path = titlePath(series);
   const placesToWatchCount = series.releases.length;
-  const tagsToShow = series.tags.slice(0, 3);
 
   return (
-    <div className="flex gap-3.5 sm:gap-4 p-3.5 sm:p-4 bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--line-strong)] rounded-[12px] transition-colors text-left group">
-      {/* 9:16 Compact Poster Thumbnail */}
+    <div className="flex gap-4 items-start py-4 border-b border-[var(--line)] text-left group">
+      {/* 72px Poster Thumbnail - no card around it */}
       <Link
         href={path}
-        className="w-16 sm:w-20 shrink-0 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crimson)] rounded-[8px]"
+        className="w-[72px] shrink-0 aspect-[9/16] select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crimson)] rounded-[8px]"
         tabIndex={-1}
         aria-hidden="true"
       >
         <Poster
           title={series.title}
-          year={series.year}
-          episodeCount={series.episodeCount}
-          className="rounded-[8px] h-full"
+          src={series.posterUrl}
+          className="rounded-[8px] h-full group-hover:border-[var(--line-strong)] transition-colors"
         />
       </Link>
 
       {/* Details Container */}
-      <div className="flex-1 flex flex-col justify-between min-w-0">
-        <div className="space-y-1">
-          {/* Canonical Title */}
-          <div className="flex items-start justify-between gap-2">
-            <Link
-              href={path}
-              className="text-[15px] sm:text-[16px] font-semibold text-[var(--ink)] group-hover:text-[var(--crimson)] transition-colors leading-snug line-clamp-1"
+      <div className="flex-1 min-w-0 space-y-1.5">
+        {/* Title */}
+        <Link
+          href={path}
+          className="text-[15px] sm:text-[16px] font-semibold text-[var(--ink)] group-hover:text-[var(--crimson)] transition-colors leading-snug line-clamp-1 block"
+        >
+          {series.title}
+        </Link>
+
+        {/* Matched alias when differing from canonical title */}
+        {matchedAlias && (
+          <div className="text-[13px] text-[var(--muted)] flex items-baseline gap-1.5 flex-wrap">
+            <span className="font-normal text-[var(--muted)]">Matched name:</span>
+            <span
+              lang={matchedAlias.alias.language}
+              className="text-[var(--ink)] font-medium"
             >
-              {series.title}
-            </Link>
+              {matchedAlias.matchSnippet ? (
+                <>
+                  <span>{matchedAlias.matchSnippet.before}</span>
+                  <mark className="bg-[var(--crimson-subtle)] text-[var(--crimson)] font-semibold rounded-[2px] px-0.5">
+                    {matchedAlias.matchSnippet.matched}
+                  </mark>
+                  <span>{matchedAlias.matchSnippet.after}</span>
+                </>
+              ) : (
+                <span>{matchedAlias.alias.text}</span>
+              )}
+            </span>
+            <span className="text-[11px] text-[var(--muted)] uppercase tracking-wider">
+              ({matchedAlias.languageName})
+            </span>
           </div>
+        )}
 
-          {/* Matched alias when differing from canonical title */}
-          {matchedAlias && (
-            <div className="text-[13px] text-[var(--muted)] flex items-baseline gap-1.5 flex-wrap">
-              <span className="font-normal text-[var(--muted)]">Matched name:</span>
-              <span
-                lang={matchedAlias.alias.language}
-                className="text-[var(--ink)] font-medium"
-              >
-                {matchedAlias.matchSnippet ? (
-                  <>
-                    <span>{matchedAlias.matchSnippet.before}</span>
-                    <mark className="bg-[var(--crimson-subtle)] text-[var(--crimson)] font-semibold rounded-[2px] px-0.5">
-                      {matchedAlias.matchSnippet.matched}
-                    </mark>
-                    <span>{matchedAlias.matchSnippet.after}</span>
-                  </>
-                ) : (
-                  <span>{matchedAlias.alias.text}</span>
-                )}
-              </span>
-              <span className="text-[11px] text-[var(--muted)] uppercase tracking-wider">
-                ({matchedAlias.languageName})
-              </span>
-            </div>
+        {/* Meta line: separate spans with 8px gaps */}
+        <div className="flex items-center gap-2 text-[12px] text-[var(--muted)] tabular-nums">
+          <span>{series.year}</span>
+          <span>{series.episodeCount} eps</span>
+          {series.ratingScore > 0 && (
+            <span className="inline-flex items-center gap-1 text-[var(--ink)] font-semibold">
+              <Star className="w-3 h-3 fill-[var(--crimson)] text-[var(--crimson)] shrink-0" />
+              {series.ratingScore.toFixed(1)}
+            </span>
           )}
-
-          {/* Metadata: Year, Episode count */}
-          <div className="flex items-center gap-3 text-[12px] text-[var(--muted)]">
-            <span className="tabular-nums font-semibold text-[var(--ink)]">
-              {series.year}
-            </span>
-            <span className="tabular-nums">
-              {series.episodeCount} episodes
-            </span>
-            <span className="capitalize">{series.productionStatus || 'Completed'}</span>
-          </div>
         </div>
 
-        {/* Bottom Row: Tags & Places to Watch */}
-        <div className="mt-3 pt-2 border-t border-[var(--line)]/60 flex flex-wrap items-center justify-between gap-2">
-          {/* Tags */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {tagsToShow.map((t) => (
-              <Tag key={t.slug} size="sm" variant="subtle">
-                {t.name}
-              </Tag>
+        {/* Tags as plain muted text */}
+        {series.tags && series.tags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-[var(--muted)]">
+            {series.tags.map((t) => (
+              <span key={t.slug}>{t.name}</span>
             ))}
           </div>
+        )}
 
-          {/* Places to watch */}
-          <div className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--muted)]">
-            <Tv className="w-3.5 h-3.5 text-[var(--muted)]" />
-            <span className="tabular-nums">
-              {placesToWatchCount}{' '}
-              {placesToWatchCount === 1 ? 'place to watch' : 'places to watch'}
-            </span>
-          </div>
+        {/* Places to watch */}
+        <div className="text-[12px] text-[var(--muted)] tabular-nums pt-0.5">
+          {placesToWatchCount}{' '}
+          {placesToWatchCount === 1 ? 'place to watch' : 'places to watch'}
         </div>
       </div>
     </div>

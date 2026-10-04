@@ -52,12 +52,6 @@ export function Footer() {
           >
             Takedown requests
           </Link>
-          <Link
-            href={siteConfig.links.devKit}
-            className="hover:text-[var(--crimson)] transition-colors text-[var(--crimson)]"
-          >
-            UI Kit
-          </Link>
         </nav>
       </div>
 

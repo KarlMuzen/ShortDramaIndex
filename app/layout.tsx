@@ -1,6 +1,14 @@
 import type { Metadata, Viewport } from 'next';
+import { Schibsted_Grotesk } from 'next/font/google';
 import './globals.css';
 import { siteConfig } from '@/src/config/site';
+
+const fontMain = Schibsted_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '600'],
+  variable: '--font-main',
+  display: 'swap',
+});
 import { SessionProvider } from '@/src/context/session-context';
 import { ThemeProvider } from '@/src/context/theme-context';
 import { ToastProvider } from '@/src/components/ui/toast';
@@ -72,6 +80,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
+      className={fontMain.variable}
     >
       <body
         suppressHydrationWarning

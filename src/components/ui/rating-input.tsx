@@ -59,7 +59,7 @@ export function RatingInput({
               onMouseEnter={() => setHoverValue(num)}
               onMouseLeave={() => setHoverValue(null)}
               className={cn(
-                'h-9 rounded-[6px] text-[12px] font-medium tabular-nums transition-colors cursor-pointer flex flex-col items-center justify-center border',
+                'h-9 min-w-0 rounded-[6px] text-[12px] font-medium tabular-nums transition-colors cursor-pointer flex flex-col items-center justify-center border',
                 isFilled
                   ? 'bg-[var(--crimson)] text-white border-[var(--crimson)]'
                   : 'bg-[var(--surface)] text-[var(--muted)] border-[var(--line)] hover:border-[var(--line-strong)] hover:text-[var(--ink)]',

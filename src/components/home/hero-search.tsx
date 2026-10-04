@@ -9,6 +9,7 @@ import { TextField } from '@/src/components/ui/text-field';
 import { StatusMark } from '@/src/components/ui/status-mark';
 import { lookupLinkAction } from '@/src/data/actions';
 import { titlePath } from '@/src/lib/urls';
+import { SEARCH_PLACEHOLDER } from '@/src/config/site';
 import { Search, Link as LinkIcon, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export function HeroSearch() {
@@ -84,7 +85,7 @@ export function HeroSearch() {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by English, Chinese (中文), Korean, or alias..."
+              placeholder={SEARCH_PLACEHOLDER}
               className="w-full h-12 pl-10 pr-4 text-[15px] bg-[var(--surface)] text-[var(--ink)] placeholder:text-[var(--muted)] rounded-[8px] border border-[var(--line)] hover:border-[var(--line-strong)] focus:border-[var(--crimson)] focus:ring-1 focus:ring-[var(--crimson)] outline-none transition-colors"
             />
           </div>
@@ -121,8 +122,7 @@ export function HeroSearch() {
       <Dialog
         open={linkDialogOpen}
         onClose={() => setLinkDialogOpen(false)}
-        title="Find by watch link"
-        description="Paste a URL from any platform (YouTube, Lumen TV, Reelway, etc.) to look up the short drama and see all its alternate names."
+        title="Paste a link"
         maxWidth="md"
       >
         <div className="space-y-4">
@@ -157,7 +157,7 @@ export function HeroSearch() {
 
               <Button
                 type="submit"
-                variant="secondary"
+                variant="primary"
                 size="sm"
                 isLoading={isLookingUp}
               >

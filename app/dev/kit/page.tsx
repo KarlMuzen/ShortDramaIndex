@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { notFound } from 'next/navigation';
 import {
   Button,
   IconButton,
@@ -49,6 +50,10 @@ import {
 } from 'lucide-react';
 
 export default function DevKitPage() {
+  if (process.env.NODE_ENV === 'production') {
+    notFound();
+  }
+
   const { user } = useSession();
   const { theme, resolvedTheme, setTheme } = useTheme();
   const { showToast } = useToast();
@@ -486,26 +491,25 @@ export default function DevKitPage() {
                       setDialogOpen(false);
                       showToast({
                         title: 'Report sent',
-                        description:
-                          'Your alias submission has been logged for moderator review.',
                         type: 'success',
                       });
                     }}
                   >
-                    Send report
+                    Report a name
                   </Button>
                 </>
               }
             >
               <div className="space-y-4 text-left">
                 <TextField
-                  label="Alias title"
+                  label="Name"
                   placeholder="e.g. 霸总的契约娇妻"
                   required
                 />
                 <Select
                   label="Language"
                   options={[
+                    { value: '', label: 'Select language' },
                     { value: 'zh', label: 'Chinese (中文)' },
                     { value: 'en', label: 'English' },
                     { value: 'es', label: 'Spanish (Español)' },
@@ -513,8 +517,15 @@ export default function DevKitPage() {
                   ]}
                 />
                 <TextField
-                  label="Source platform or URL"
-                  placeholder="e.g. Lumen TV app search, YouTube clip title"
+                  label="Source link"
+                  type="url"
+                  placeholder="https://example.com/source"
+                  required
+                />
+                <Textarea
+                  label="Note"
+                  placeholder="Optional notes or context..."
+                  rows={3}
                 />
               </div>
             </Dialog>
@@ -651,29 +662,21 @@ export default function DevKitPage() {
               9:16 Ratio Posters (Neutral Placeholders)
             </h3>
             <p className="text-[13px] text-[var(--muted)]">
-              Neutral geometry with title typography fallback. Never real posters or brand assets.
+              Empty 9:16 geometry blocks with 12px radius and 1px line. With image src when available.
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4 max-w-4xl">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 max-w-4xl">
               <Poster
                 title="The Billionaire’s Secret Fiancée"
-                year={2024}
-                episodeCount={82}
               />
               <Poster
                 title="重生千金逆袭录"
-                year={2024}
-                episodeCount={95}
               />
               <Poster
                 title="Midnight Boardroom Romance"
-                year={2024}
-                episodeCount={60}
               />
               <Poster
                 title="Accidental Empress in Metropolis"
-                year={2024}
-                episodeCount={75}
               />
             </div>
           </div>

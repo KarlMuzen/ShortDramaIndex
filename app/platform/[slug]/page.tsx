@@ -242,47 +242,38 @@ export default async function PlatformPage({
         </div>
 
         {seriesResult.items.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
             {seriesResult.items.map((series, idx) => (
-              <div
+              <Link
                 key={series.id}
-                className="group flex flex-col space-y-2 text-left"
+                href={titlePath(series)}
+                className="group flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crimson)] rounded-[12px] text-left"
               >
-                <Link
-                  href={titlePath(series)}
-                  className="block aspect-[9/16] rounded-[8px] overflow-hidden relative border border-[var(--line)] group-hover:border-[var(--line-strong)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crimson)]"
-                >
+                <div className="mb-2">
                   <Poster
                     title={series.title}
-                    year={series.year}
-                    episodeCount={series.episodeCount}
-                    className="w-full h-full object-cover"
+                    src={series.posterUrl}
+                    className="group-hover:border-[var(--line-strong)] transition-colors"
                     priority={idx === 0}
                   />
+                </div>
 
-                  {/* Rating Tag */}
-                  {series.ratingScore > 0 && (
-                    <div className="absolute bottom-1.5 left-1.5 bg-[var(--ink)] text-[var(--paper)] text-[12px] font-semibold px-1.5 py-0.5 rounded-[4px] flex items-center gap-1 tabular-nums">
-                      <Star className="w-3 h-3 fill-[var(--crimson)] text-[var(--crimson)]" />
-                      <span>{series.ratingScore.toFixed(1)}</span>
-                    </div>
-                  )}
-                </Link>
-
-                <div className="space-y-0.5">
-                  <Link
-                    href={titlePath(series)}
-                    className="font-semibold text-[14px] text-[var(--ink)] group-hover:text-[var(--crimson)] line-clamp-2 leading-snug transition-colors"
-                  >
+                <div className="flex flex-col flex-1">
+                  <h3 className="text-[14px] font-semibold text-[var(--ink)] leading-snug line-clamp-2 group-hover:text-[var(--crimson)] transition-colors">
                     {series.title}
-                  </Link>
-
-                  <div className="flex items-center gap-2 text-[12px] text-[var(--muted)] tabular-nums">
+                  </h3>
+                  <div className="flex items-center gap-2 text-[12px] text-[var(--muted)] tabular-nums mt-1">
                     <span>{series.year}</span>
                     <span>{series.episodeCount} eps</span>
+                    {series.ratingScore > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[var(--ink)] font-semibold">
+                        <Star className="w-3 h-3 fill-[var(--crimson)] text-[var(--crimson)] shrink-0" />
+                        {series.ratingScore.toFixed(1)}
+                      </span>
+                    )}
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         ) : (

@@ -37,7 +37,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     const hasError = Boolean(errorMessage);
 
     return (
-      <div className="flex flex-col gap-1.5 w-full text-left">
+      <div className="flex flex-col gap-1.5 w-full min-w-0 text-left">
         {label && (
           <label
             htmlFor={selectId}
@@ -47,7 +47,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           </label>
         )}
 
-        <div className="relative flex items-center w-full">
+        <div className="relative flex items-center w-full min-w-0">
           <select
             ref={ref}
             id={selectId}
@@ -61,10 +61,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                 : undefined
             }
             className={cn(
-              'w-full h-10 pl-3 pr-9 text-[14px] bg-[var(--surface)] text-[var(--ink)] rounded-[8px] border transition-colors outline-none appearance-none cursor-pointer',
+              'w-full min-w-0 h-10 pl-3 pr-9 text-[14px] bg-[var(--surface)] text-[var(--ink)] rounded-[8px] border transition-colors outline-none focus:outline-2 focus:outline-[var(--crimson)] focus:outline-offset-0 appearance-none cursor-pointer',
               hasError
-                ? 'border-[var(--crimson)] focus:border-[var(--crimson)] ring-1 ring-[var(--crimson)]/20'
-                : 'border-[var(--line)] hover:border-[var(--line-strong)] focus:border-[var(--crimson)]',
+                ? 'border-[var(--crimson)]'
+                : 'border-[var(--line)] hover:border-[var(--line-strong)]',
               disabled && 'opacity-60 bg-[var(--surface-subtle)] cursor-not-allowed',
               className
             )}

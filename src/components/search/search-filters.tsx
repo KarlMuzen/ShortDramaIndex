@@ -3,7 +3,6 @@
 import React from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Platform, Tag } from '@/src/data/types';
-import { Button } from '@/src/components/ui/button';
 import { Select } from '@/src/components/ui/select';
 import { Radio } from '@/src/components/ui/radio';
 import { RotateCcw } from 'lucide-react';
@@ -13,6 +12,7 @@ interface SearchFiltersProps {
   tags: Tag[];
   onApply?: () => void;
   className?: string;
+  hideHeader?: boolean;
 }
 
 export function SearchFilters({
@@ -20,6 +20,7 @@ export function SearchFilters({
   tags,
   onApply,
   className,
+  hideHeader = false,
 }: SearchFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -30,15 +31,13 @@ export function SearchFilters({
   const currentTag = searchParams?.get('tag') || '';
   const currentYear = searchParams?.get('year') || '';
   const currentStatus = searchParams?.get('status') || '';
-  const currentEpisodeRange = searchParams?.get('episodes') || '';
 
   const hasActiveFilters = Boolean(
     currentPlatform ||
     currentLang ||
     currentTag ||
     currentYear ||
-    currentStatus ||
-    currentEpisodeRange
+    currentStatus
   );
 
   const updateParam = (key: string, value: string) => {
@@ -67,26 +66,28 @@ export function SearchFilters({
   };
 
   return (
-    <div className={`space-y-6 text-left ${className || ''}`}>
-      {/* Filter Header with Clear Action */}
-      <div className="flex items-center justify-between pb-2 border-b border-[var(--line)]">
-        <span className="text-[13px] font-semibold text-[var(--ink)] uppercase tracking-wider">
-          Filters
-        </span>
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={clearAllFilters}
-            className="text-[12px] text-[var(--crimson)] hover:underline flex items-center gap-1 font-medium cursor-pointer"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>Clear all</span>
-          </button>
-        )}
-      </div>
+    <div className={`space-y-5 text-left w-full min-w-0 ${className || ''}`}>
+      {/* Optional Header for Desktop Sidebar without "FILTERS" label */}
+      {!hideHeader && (
+        <div className="flex items-center justify-between pb-2 border-b border-[var(--line)]">
+          <span className="text-[14px] font-semibold text-[var(--ink)]">
+            Filter options
+          </span>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="text-[12px] text-[var(--crimson)] hover:underline flex items-center gap-1 font-medium cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Clear filters</span>
+            </button>
+          )}
+        </div>
+      )}
 
-      {/* Platform Filter */}
-      <div className="space-y-2">
+      {/* 1. Platform Filter */}
+      <div className="space-y-1.5 w-full min-w-0">
         <label className="text-[13px] font-semibold text-[var(--ink)] block">
           Platform
         </label>
@@ -103,8 +104,8 @@ export function SearchFilters({
         />
       </div>
 
-      {/* Title / Original Language Filter */}
-      <div className="space-y-2">
+      {/* 2. Language Filter */}
+      <div className="space-y-1.5 w-full min-w-0">
         <label className="text-[13px] font-semibold text-[var(--ink)] block">
           Language
         </label>
@@ -122,10 +123,10 @@ export function SearchFilters({
         />
       </div>
 
-      {/* Tag Filter */}
-      <div className="space-y-2">
+      {/* 3. Tag Filter */}
+      <div className="space-y-1.5 w-full min-w-0">
         <label className="text-[13px] font-semibold text-[var(--ink)] block">
-          Genre & Tag
+          Tag
         </label>
         <Select
           value={currentTag}
@@ -140,10 +141,10 @@ export function SearchFilters({
         />
       </div>
 
-      {/* Year Filter */}
-      <div className="space-y-2">
+      {/* 4. Release Year Filter */}
+      <div className="space-y-1.5 w-full min-w-0">
         <label className="text-[13px] font-semibold text-[var(--ink)] block">
-          Release Year
+          Release year
         </label>
         <Select
           value={currentYear}
@@ -156,18 +157,19 @@ export function SearchFilters({
         />
       </div>
 
-      {/* Production Status */}
-      <div className="space-y-2">
+      {/* 5. Status: Stacked vertically as 44px rows */}
+      <div className="space-y-1.5 w-full min-w-0">
         <label className="text-[13px] font-semibold text-[var(--ink)] block">
           Status
         </label>
-        <div className="space-y-1.5">
+        <div className="space-y-1 w-full min-w-0">
           <Radio
             name="status_filter"
             value=""
             checked={currentStatus === ''}
             onChange={() => updateParam('status', '')}
             label="All statuses"
+            className="w-full min-h-[44px] flex items-center px-3 py-2 rounded-[8px] bg-[var(--surface-subtle)]/50 hover:bg-[var(--surface-subtle)] border border-transparent hover:border-[var(--line)] transition-colors box-border"
           />
           <Radio
             name="status_filter"
@@ -175,6 +177,7 @@ export function SearchFilters({
             checked={currentStatus === 'completed'}
             onChange={() => updateParam('status', 'completed')}
             label="Completed"
+            className="w-full min-h-[44px] flex items-center px-3 py-2 rounded-[8px] bg-[var(--surface-subtle)]/50 hover:bg-[var(--surface-subtle)] border border-transparent hover:border-[var(--line)] transition-colors box-border"
           />
           <Radio
             name="status_filter"
@@ -182,43 +185,7 @@ export function SearchFilters({
             checked={currentStatus === 'ongoing'}
             onChange={() => updateParam('status', 'ongoing')}
             label="Ongoing"
-          />
-        </div>
-      </div>
-
-      {/* Episode Count Range */}
-      <div className="space-y-2">
-        <label className="text-[13px] font-semibold text-[var(--ink)] block">
-          Episode count
-        </label>
-        <div className="space-y-1.5">
-          <Radio
-            name="episodes_filter"
-            value=""
-            checked={currentEpisodeRange === ''}
-            onChange={() => updateParam('episodes', '')}
-            label="Any length"
-          />
-          <Radio
-            name="episodes_filter"
-            value="<50"
-            checked={currentEpisodeRange === '<50'}
-            onChange={() => updateParam('episodes', '<50')}
-            label="Under 50 episodes"
-          />
-          <Radio
-            name="episodes_filter"
-            value="50-80"
-            checked={currentEpisodeRange === '50-80'}
-            onChange={() => updateParam('episodes', '50-80')}
-            label="50 - 80 episodes"
-          />
-          <Radio
-            name="episodes_filter"
-            value="80+"
-            checked={currentEpisodeRange === '80+'}
-            onChange={() => updateParam('episodes', '80+')}
-            label="80+ episodes"
+            className="w-full min-h-[44px] flex items-center px-3 py-2 rounded-[8px] bg-[var(--surface-subtle)]/50 hover:bg-[var(--surface-subtle)] border border-transparent hover:border-[var(--line)] transition-colors box-border"
           />
         </div>
       </div>

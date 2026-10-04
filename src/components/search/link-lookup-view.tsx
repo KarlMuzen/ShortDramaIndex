@@ -71,8 +71,7 @@ export function LinkLookupView({ lookupResult }: LinkLookupViewProps) {
           <div className="w-20 shrink-0">
             <Poster
               title={series.title}
-              year={series.year}
-              episodeCount={series.episodeCount}
+              src={series.posterUrl}
             />
           </div>
 
@@ -153,8 +152,7 @@ export function LinkLookupView({ lookupResult }: LinkLookupViewProps) {
                     <div className="w-12 shrink-0">
                       <Poster
                         title={series.title}
-                        year={series.year}
-                        episodeCount={series.episodeCount}
+                        src={series.posterUrl}
                       />
                     </div>
                     <div>

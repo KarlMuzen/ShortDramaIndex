@@ -1,6 +1,5 @@
 import React from 'react';
 import { RatingDisplay } from '@/src/components/ui/rating-display';
-import { Star } from 'lucide-react';
 
 interface CommunityStatsProps {
   score: number;
@@ -13,36 +12,31 @@ export function CommunityStats({
   ratingCount,
   popularity = 5000,
 }: CommunityStatsProps) {
-  // Generate a realistic score distribution for reference bars
+  // All 10 score distribution rows
   const distribution = [
-    { score: 10, percent: 32 },
-    { score: 9, percent: 28 },
-    { score: 8, percent: 22 },
+    { score: 10, percent: 30 },
+    { score: 9, percent: 26 },
+    { score: 8, percent: 20 },
     { score: 7, percent: 11 },
-    { score: 6, percent: 4 },
-    { score: 5, percent: 2 },
-    { score: 4, percent: 1 },
+    { score: 6, percent: 6 },
+    { score: 5, percent: 3 },
+    { score: 4, percent: 2 },
+    { score: 3, percent: 1 },
+    { score: 2, percent: 1 },
+    { score: 1, percent: 0 },
   ];
 
   // Community list counts
   const watchingCount = Math.round(popularity * 0.42);
   const planToWatchCount = Math.round(popularity * 0.35);
   const completedCount = Math.round(popularity * 0.23);
+  const totalTracking = watchingCount + planToWatchCount + completedCount;
 
   return (
-    <div className="space-y-4 text-left">
-      <div className="border-b border-[var(--line)] pb-2.5">
-        <h2 className="text-[17px] sm:text-[18px] font-semibold text-[var(--ink)]">
-          Community
-        </h2>
-        <p className="text-[13px] text-[var(--muted)] mt-0.5">
-          Ratings and list statistics from short drama viewers
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start pt-1">
-        {/* Left: Overall score & breakdown */}
-        <div className="space-y-4">
+    <div className="space-y-4 text-left w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+        {/* Left: Overall score & 10-tier breakdown */}
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[13px] font-semibold text-[var(--ink)]">
               Score rating
@@ -56,36 +50,37 @@ export function CommunityStats({
             <RatingDisplay score={score} size="lg" showCount={false} />
           </div>
 
-          {/* Simple Distribution Bars */}
+          {/* 10 Score Rows (No star icon, bars in Muted) */}
           <div className="space-y-1.5 pt-1">
             {distribution.map((d) => (
               <div
                 key={d.score}
-                className="flex items-center gap-2 text-[11px] text-[var(--muted)]"
+                className="flex items-center gap-2 text-[12px] text-[var(--muted)]"
               >
-                <span className="w-4 tabular-nums text-right font-medium">
+                <span className="w-5 tabular-nums text-right font-medium">
                   {d.score}
                 </span>
-                <Star className="w-3 h-3 text-[var(--muted)]" />
-                <div className="flex-1 h-2 bg-[var(--surface-subtle)] rounded-full overflow-hidden border border-[var(--line)]/50">
+                <div className="flex-1 h-2 bg-[var(--surface-subtle)] rounded-full overflow-hidden border border-[var(--line)]">
                   <div
-                    className="h-full bg-[var(--crimson)] rounded-full"
+                    className="h-full bg-[var(--line-strong)] rounded-full"
                     style={{ width: `${d.percent}%` }}
                   />
                 </div>
-                <span className="w-8 tabular-nums text-right">{d.percent}%</span>
+                <span className="w-8 tabular-nums text-right text-[11px]">
+                  {d.percent}%
+                </span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Right: Listed counts stats */}
+        {/* Right: Watchlist tracking stats */}
         <div className="space-y-3">
           <span className="text-[13px] font-semibold text-[var(--ink)] block">
             Watchlist tracking
           </span>
 
-          <div className="space-y-2.5 divide-y divide-[var(--line)] text-[13px] border-y border-[var(--line)]">
+          <div className="space-y-2 divide-y divide-[var(--line)] text-[13px] border-y border-[var(--line)]">
             <div className="flex items-center justify-between py-2">
               <span className="text-[var(--muted)]">Watching</span>
               <span className="font-semibold text-[var(--ink)] tabular-nums">
@@ -106,8 +101,8 @@ export function CommunityStats({
             </div>
             <div className="flex items-center justify-between py-2">
               <span className="text-[var(--muted)]">Total tracking</span>
-              <span className="font-bold text-[var(--crimson)] tabular-nums">
-                {(watchingCount + planToWatchCount + completedCount).toLocaleString()}
+              <span className="font-bold text-[var(--ink)] tabular-nums">
+                {totalTracking.toLocaleString()}
               </span>
             </div>
           </div>

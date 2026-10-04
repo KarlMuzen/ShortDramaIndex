@@ -36,7 +36,7 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
     const hasError = Boolean(errorMessage);
 
     return (
-      <div className="flex flex-col gap-1.5 w-full text-left">
+      <div className="flex flex-col gap-1.5 w-full min-w-0 text-left">
         {label && (
           <label
             htmlFor={inputId}
@@ -46,7 +46,7 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
           </label>
         )}
 
-        <div className="relative flex items-center w-full">
+        <div className="relative flex items-center w-full min-w-0">
           {leftIcon && (
             <div className="absolute left-3 flex items-center pointer-events-none text-[var(--muted)]">
               {leftIcon}
@@ -67,10 +67,10 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
                 : undefined
             }
             className={cn(
-              'w-full h-10 px-3 text-[14px] bg-[var(--surface)] text-[var(--ink)] placeholder:text-[var(--muted)] rounded-[8px] border transition-colors outline-none',
+              'w-full min-w-0 h-10 px-3 text-[14px] bg-[var(--surface)] text-[var(--ink)] placeholder:text-[var(--muted)] rounded-[8px] border transition-colors outline-none focus:outline-2 focus:outline-[var(--crimson)] focus:outline-offset-0',
               hasError
-                ? 'border-[var(--crimson)] focus:border-[var(--crimson)] ring-1 ring-[var(--crimson)]/20'
-                : 'border-[var(--line)] hover:border-[var(--line-strong)] focus:border-[var(--crimson)]',
+                ? 'border-[var(--crimson)]'
+                : 'border-[var(--line)] hover:border-[var(--line-strong)]',
               leftIcon ? 'pl-9' : '',
               rightIcon || (clearable && value) ? 'pr-9' : '',
               disabled && 'opacity-60 bg-[var(--surface-subtle)] cursor-not-allowed',

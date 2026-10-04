@@ -1,8 +1,22 @@
-import { redirect } from 'next/navigation';
-import { getSession } from '@/src/data/repository';
+'use client';
 
-export default async function ProfileRedirectPage() {
-  const user = await getSession();
-  const handle = user?.handle || 'elenavance';
-  redirect(`/u/${handle}`);
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from '@/src/context/session-context';
+
+export default function ProfileRedirectPage() {
+  const router = useRouter();
+  const { user, isLoading } = useSession();
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (user) {
+        router.replace(`/u/${user.handle}`);
+      } else {
+        router.replace('/sign-in');
+      }
+    }
+  }, [user, isLoading, router]);
+
+  return null;
 }

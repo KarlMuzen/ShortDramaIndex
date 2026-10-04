@@ -28,7 +28,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const hasError = Boolean(errorMessage);
 
     return (
-      <div className="flex flex-col gap-1.5 w-full text-left">
+      <div className="flex flex-col gap-1.5 w-full min-w-0 text-left">
         {label && (
           <label
             htmlFor={textareaId}
@@ -52,10 +52,10 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               : undefined
           }
           className={cn(
-            'w-full p-3 text-[14px] bg-[var(--surface)] text-[var(--ink)] placeholder:text-[var(--muted)] rounded-[8px] border transition-colors outline-none resize-y',
+            'w-full min-w-0 p-3 text-[14px] bg-[var(--surface)] text-[var(--ink)] placeholder:text-[var(--muted)] rounded-[8px] border transition-colors outline-none focus:outline-2 focus:outline-[var(--crimson)] focus:outline-offset-0 resize-y',
             hasError
-              ? 'border-[var(--crimson)] focus:border-[var(--crimson)] ring-1 ring-[var(--crimson)]/20'
-              : 'border-[var(--line)] hover:border-[var(--line-strong)] focus:border-[var(--crimson)]',
+              ? 'border-[var(--crimson)]'
+              : 'border-[var(--line)] hover:border-[var(--line-strong)]',
             disabled && 'opacity-60 bg-[var(--surface-subtle)] cursor-not-allowed',
             className
           )}

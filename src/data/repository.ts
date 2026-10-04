@@ -10,7 +10,6 @@ import {
   Release,
   SearchResultItem,
   MatchedAliasInfo,
-  LinkLookupResult,
   UserReport,
   UserProfileData,
   UserPreferences,
@@ -231,88 +230,102 @@ function mapSeriesRecord(row: any): Series {
 export async function getHomePageFeed(): Promise<HomeFeedData> {
   if (isSupabaseConfigured) {
     try {
-      const { data: popularData } = await supabasePublic
+      const { data: popularData, error: popError } = await supabasePublic
         .from('series')
         .select('id, slug, title, year, episode_count, visibility, list_count, rating_count')
         .eq('visibility', 'public')
         .order('list_count', { ascending: false })
         .limit(6);
 
-      const { data: aliasData } = await supabasePublic
+      const { data: aliasData, error: aliasError } = await supabasePublic
         .from('aliases')
         .select('text, language, source_url, source_label, added_at, series:series_id(id, slug, title, visibility)')
         .order('added_at', { ascending: false })
         .limit(7);
 
-      const { data: tagsData } = await supabasePublic
+      const { data: tagsData, error: tagsError } = await supabasePublic
         .from('tags')
         .select('slug, name')
         .limit(8);
 
-      const { data: platformsData } = await supabasePublic
+      const { data: platformsData, error: platError } = await supabasePublic
         .from('platforms')
         .select('slug, name, url, is_official')
         .limit(10);
 
-      if (popularData && popularData.length > 0) {
-        const popularThisWeek: Series[] = popularData.map((p) => ({
-          id: Number(p.id),
-          slug: p.slug,
-          title: p.title,
-          originalLanguage: 'zh',
-          year: p.year,
-          episodeCount: p.episode_count,
-          synopsis: '',
-          updatedAt: '2024-01-01',
-          visibility: p.visibility,
-          ratingScore: 0,
-          ratingCount: p.rating_count || 0,
-          tags: [],
-          aliases: [],
-          releases: [],
-          cast: [],
-        }));
-
-        const recentlyAddedAliases: RecentAliasEntry[] = (aliasData || [])
-          .filter((a: any) => a.series && a.series.visibility === 'public')
-          .map((a: any) => ({
-            alias: {
-              text: a.text,
-              language: a.language,
-              source: a.source_label || a.source_url || 'Community',
-              status: 'verified',
-              addedBy: 'Contributor',
-              addedAt: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
-            },
-            seriesId: Number(a.series.id),
-            seriesSlug: a.series.slug,
-            seriesTitle: a.series.title,
-            addedAt: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
-            relativeTime: getRelativeTimeString(a.added_at || '2024-01-01'),
-          }));
-
-        const browseLanguages: BrowseLanguage[] = [
-          { code: 'zh', label: 'Chinese', nativeLabel: '中文', count: 12 },
-          { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: 4 },
-          { code: 'en', label: 'English', nativeLabel: 'English', count: 3 },
-          { code: 'es', label: 'Spanish', nativeLabel: 'Español', count: 2 },
-          { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: 1 },
-        ];
-
+      if (popError || aliasError || tagsError || platError) {
         return {
-          popularThisWeek,
-          recentlyAddedAliases,
-          browseTags: (tagsData || mockTags) as Tag[],
-          browsePlatforms: (platformsData || mockPlatforms) as Platform[],
-          browseLanguages,
+          popularThisWeek: [],
+          recentlyAddedAliases: [],
+          browseTags: [],
+          browsePlatforms: [],
+          browseLanguages: [],
         };
       }
+
+      const popularThisWeek: Series[] = (popularData || []).map((p: any) => ({
+        id: Number(p.id),
+        slug: p.slug,
+        title: p.title,
+        originalLanguage: 'zh',
+        year: p.year,
+        episodeCount: p.episode_count,
+        synopsis: '',
+        updatedAt: '2024-01-01',
+        visibility: p.visibility,
+        ratingScore: 0,
+        ratingCount: p.rating_count || 0,
+        tags: [],
+        aliases: [],
+        releases: [],
+        cast: [],
+      }));
+
+      const recentlyAddedAliases: RecentAliasEntry[] = (aliasData || [])
+        .filter((a: any) => a.series && a.series.visibility === 'public')
+        .map((a: any) => ({
+          alias: {
+            text: a.text,
+            language: a.language,
+            source: a.source_label || a.source_url || 'Community',
+            status: 'verified',
+            addedBy: 'Contributor',
+            addedAt: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
+          },
+          seriesId: Number(a.series.id),
+          seriesSlug: a.series.slug,
+          seriesTitle: a.series.title,
+          addedAt: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
+          relativeTime: getRelativeTimeString(a.added_at || '2024-01-01'),
+        }));
+
+      const browseLanguages: BrowseLanguage[] = [
+        { code: 'zh', label: 'Chinese', nativeLabel: '中文', count: 0 },
+        { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: 0 },
+        { code: 'en', label: 'English', nativeLabel: 'English', count: 0 },
+        { code: 'es', label: 'Spanish', nativeLabel: 'Español', count: 0 },
+        { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: 0 },
+      ];
+
+      return {
+        popularThisWeek,
+        recentlyAddedAliases,
+        browseTags: (tagsData || []) as Tag[],
+        browsePlatforms: (platformsData || []) as Platform[],
+        browseLanguages,
+      };
     } catch {
-      // Graceful fallback to mock data
+      return {
+        popularThisWeek: [],
+        recentlyAddedAliases: [],
+        browseTags: [],
+        browsePlatforms: [],
+        browseLanguages: [],
+      };
     }
   }
 
-  // Fallback to typed mock data
+  // Fallback to typed mock data only when NEXT_PUBLIC_SUPABASE_URL is unset
   const sortedPopular = [...mockSeriesList]
     .filter((s) => s.visibility === 'public')
     .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
@@ -439,7 +452,22 @@ export async function searchSeries(params: {
       };
     }
 
-    // Try finding candidate matches by platform or slug in URL
+    if (isSupabaseConfigured) {
+      return {
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: clampedPageSize,
+        totalPages: 0,
+        isUrlSearch: true,
+        urlLookupResult: {
+          type: 'not_found',
+          url: rawQ,
+        },
+      };
+    }
+
+    // Try finding candidate matches by platform or slug in URL for mock data
     const possible = mockSeriesList.filter((s) => {
       const slugMatch = rawQ.toLowerCase().includes(s.slug.replace(/-/g, ''));
       const titleMatch = s.title.split(' ').some((w) => w.length > 3 && rawQ.toLowerCase().includes(w.toLowerCase()));
@@ -476,7 +504,7 @@ export async function searchSeries(params: {
     };
   }
 
-  // 1. Try Supabase search_series RPC function
+  // 1. When Supabase is configured: execute database search, return empty state on error/empty
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic.rpc('search_series', {
@@ -487,44 +515,38 @@ export async function searchSeries(params: {
         p_page_size: clampedPageSize,
       });
 
-      if (data && data.length > 0 && !error) {
-        const total = Number(data[0].total_count || data.length);
-        const items: SearchResultItem[] = data.map((row: any) => {
-          const series: Series = {
-            id: Number(row.id),
-            slug: row.slug,
-            title: row.title,
-            romanizedTitle: row.romanized_title || undefined,
-            originalLanguage: row.original_language,
-            year: row.year,
-            episodeCount: row.episode_count,
-            posterUrl: row.poster_url || undefined,
-            synopsis: row.synopsis || '',
-            updatedAt: '2024-01-01',
-            visibility: 'public',
-            ratingScore: Number(row.rating_score || 0),
-            ratingCount: Number(row.rating_count || 0),
-            popularity: Number(row.list_count || 0) * 10 + Number(row.rating_count || 0),
-            tags: [],
-            aliases: row.matched_alias_text
-              ? [
-                  {
-                    text: row.matched_alias_text,
-                    language: row.matched_alias_language || 'zh',
-                    source: 'Verified',
-                    status: 'verified',
-                    addedBy: 'Editor',
-                    addedAt: '2024-01-01',
-                  },
-                ]
-              : [],
-            releases: [],
-            cast: [],
-          };
+      if (error || !data || data.length === 0) {
+        return {
+          items: [],
+          total: 0,
+          page: safePage,
+          pageSize: clampedPageSize,
+          totalPages: 0,
+          isUrlSearch: false,
+        };
+      }
 
-          const matchedAliasInfo: MatchedAliasInfo | undefined = row.matched_alias_text
-            ? {
-                alias: {
+      const total = Number(data[0].total_count || data.length);
+      const items: SearchResultItem[] = data.map((row: any) => {
+        const series: Series = {
+          id: Number(row.id),
+          slug: row.slug,
+          title: row.title,
+          romanizedTitle: row.romanized_title || undefined,
+          originalLanguage: row.original_language,
+          year: row.year,
+          episodeCount: row.episode_count,
+          posterUrl: row.poster_url || undefined,
+          synopsis: row.synopsis || '',
+          updatedAt: '2024-01-01',
+          visibility: 'public',
+          ratingScore: Number(row.rating_score || 0),
+          ratingCount: Number(row.rating_count || 0),
+          popularity: Number(row.list_count || 0) * 10 + Number(row.rating_count || 0),
+          tags: [],
+          aliases: row.matched_alias_text
+            ? [
+                {
                   text: row.matched_alias_text,
                   language: row.matched_alias_language || 'zh',
                   source: 'Verified',
@@ -532,33 +554,55 @@ export async function searchSeries(params: {
                   addedBy: 'Editor',
                   addedAt: '2024-01-01',
                 },
-                matchSnippet: extractMatchSnippet(row.matched_alias_text, rawQ),
-                languageName: getLanguageName(row.matched_alias_language || 'zh'),
-              }
-            : undefined;
+              ]
+            : [],
+          releases: [],
+          cast: [],
+        };
 
-          return {
-            series,
-            matchedField: (row.matched_field as any) || 'title',
-            matchedAlias: matchedAliasInfo,
-          };
-        });
+        const matchedAliasInfo: MatchedAliasInfo | undefined = row.matched_alias_text
+          ? {
+              alias: {
+                text: row.matched_alias_text,
+                language: row.matched_alias_language || 'zh',
+                source: 'Verified',
+                status: 'verified',
+                addedBy: 'Editor',
+                addedAt: '2024-01-01',
+              },
+              matchSnippet: extractMatchSnippet(row.matched_alias_text, rawQ),
+              languageName: getLanguageName(row.matched_alias_language || 'zh'),
+            }
+          : undefined;
 
         return {
-          items,
-          total,
-          page: safePage,
-          pageSize: clampedPageSize,
-          totalPages: Math.max(1, Math.ceil(total / clampedPageSize)),
-          isUrlSearch: false,
+          series,
+          matchedField: (row.matched_field as any) || 'title',
+          matchedAlias: matchedAliasInfo,
         };
-      }
+      });
+
+      return {
+        items,
+        total,
+        page: safePage,
+        pageSize: clampedPageSize,
+        totalPages: Math.max(1, Math.ceil(total / clampedPageSize)),
+        isUrlSearch: false,
+      };
     } catch {
-      // Fallback to mock search
+      return {
+        items: [],
+        total: 0,
+        page: safePage,
+        pageSize: clampedPageSize,
+        totalPages: 0,
+        isUrlSearch: false,
+      };
     }
   }
 
-  // 2. Typed in-memory fallback search (ranking exact alias first, prefix, then partial)
+  // 2. Mock mode only when Supabase is unset
   interface RankedItem {
     item: SearchResultItem;
     tier: number;
@@ -579,11 +623,9 @@ export async function searchSeries(params: {
     if (q) {
       isMatch = false;
 
-      // Check exact / prefix / partial matches on title, romanized, and aliases
       const lowerTitle = normalizeForSearch(series.title);
       const lowerRom = series.romanizedTitle ? normalizeForSearch(series.romanizedTitle) : '';
 
-      // Check aliases
       const bestAlias = series.aliases.find((alias) =>
         normalizeForSearch(alias.text).includes(q)
       );
@@ -636,7 +678,6 @@ export async function searchSeries(params: {
 
     if (!isMatch) continue;
 
-    // Apply Filters
     if (
       filters.platform &&
       !series.releases.some((r) => r.platformSlug === filters.platform)
@@ -693,7 +734,6 @@ export async function searchSeries(params: {
     });
   }
 
-  // Sorting
   rankedItems.sort((a, b) => {
     switch (sort) {
       case 'popularity':
@@ -709,7 +749,6 @@ export async function searchSeries(params: {
         return a.item.series.title.localeCompare(b.item.series.title);
       case 'relevance':
       default:
-        // Tier 1 (exact) -> Tier 2 (prefix) -> Tier 3 (partial) -> Popularity
         if (a.tier !== b.tier) return a.tier - b.tier;
         return (b.item.series.popularity || 0) - (a.item.series.popularity || 0);
     }
@@ -749,12 +788,12 @@ export async function getSeriesById(id: number): Promise<Series | null> {
         .eq('id', id)
         .single();
 
-      if (data && !error) {
-        if (data.visibility === 'removed') return null;
-        return mapSeriesRecord(data);
+      if (error || !data || data.visibility === 'removed') {
+        return null;
       }
+      return mapSeriesRecord(data);
     } catch {
-      // Fallback to mock
+      return null;
     }
   }
 
@@ -773,8 +812,29 @@ export async function getRelatedSeries(
   const current = await getSeriesById(id);
   if (!current) return [];
 
-  const currentTagSlugs = new Set(current.tags.map((t) => t.slug));
+  if (isSupabaseConfigured) {
+    try {
+      const tagSlugs = current.tags.map((t) => t.slug);
+      if (tagSlugs.length === 0) return [];
 
+      const { data, error } = await supabasePublic
+        .from('series_tags')
+        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
+        .in('tag_slug', tagSlugs)
+        .neq('series_id', id)
+        .limit(limit);
+
+      if (error || !data) return [];
+      return data
+        .map((d: any) => d.series)
+        .filter((s: any) => s && s.visibility === 'public')
+        .map((s: any) => mapSeriesRecord(s));
+    } catch {
+      return [];
+    }
+  }
+
+  const currentTagSlugs = new Set(current.tags.map((t) => t.slug));
   const others = mockSeriesList.filter(
     (s) => s.id !== id && s.visibility === 'public'
   );
@@ -794,6 +854,55 @@ export async function lookupLink(
   url: string
 ): Promise<{ series: Series; release: Release } | null> {
   const cleanUrl = url.trim().toLowerCase();
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabasePublic
+        .from('releases')
+        .select(`
+          id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, platforms(name),
+          series:series_id(
+            id, slug, title, romanized_title, original_language, origin_country,
+            year, episode_count, avg_episode_minutes, synopsis, poster_url,
+            production_status, visibility, rating_score, rating_count, list_count, updated_at,
+            aliases(id, text, language, script, source_url, source_label, status, added_by, added_at),
+            releases(id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, platforms(name)),
+            series_tags(tag_slug, tags(slug, name)),
+            series_people(role_type, character_name, people(id, slug, name, native_name))
+          )
+        `)
+        .ilike('url', `%${cleanUrl}%`)
+        .limit(1)
+        .single();
+
+      const rawSeries: any = (data as any)?.series;
+      const seriesObj = Array.isArray(rawSeries) ? rawSeries[0] : rawSeries;
+      if (error || !data || !seriesObj || seriesObj.visibility === 'removed') {
+        return null;
+      }
+
+      const series = mapSeriesRecord(seriesObj);
+      const releaseData = data as any;
+      const release: Release = {
+        id: releaseData.id,
+        platform: releaseData.platforms?.name || releaseData.platform_slug,
+        platformSlug: releaseData.platform_slug,
+        region: releaseData.region || 'Global',
+        dubLanguage: releaseData.dub_language,
+        subtitleLanguages: releaseData.subtitle_languages || [],
+        episodeCount: releaseData.episode_count,
+        releasedYear: releaseData.released_year,
+        url: releaseData.url,
+        lastChecked: 'Today',
+        linkStatus: releaseData.link_status || 'active',
+        isOfficial: Boolean(releaseData.is_official),
+      };
+
+      return { series, release };
+    } catch {
+      return null;
+    }
+  }
 
   for (const series of mockSeriesList) {
     if (series.visibility === 'removed') continue;
@@ -817,6 +926,35 @@ export async function lookupLink(
 export async function getTag(
   slug: string
 ): Promise<{ tag: Tag; series: Series[] } | null> {
+  if (isSupabaseConfigured) {
+    try {
+      const { data: tagData, error: tagError } = await supabasePublic
+        .from('tags')
+        .select('slug, name')
+        .eq('slug', slug)
+        .single();
+
+      if (tagError || !tagData) return null;
+
+      const { data: seriesData } = await supabasePublic
+        .from('series_tags')
+        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
+        .eq('tag_slug', slug);
+
+      const series = (seriesData || [])
+        .map((d: any) => d.series)
+        .filter((s: any) => s && s.visibility === 'public')
+        .map((s: any) => mapSeriesRecord(s));
+
+      return {
+        tag: { slug: tagData.slug, name: tagData.name, count: series.length },
+        series,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   const tag = mockTags.find((t) => t.slug === slug);
   if (!tag) return null;
 
@@ -832,6 +970,41 @@ export async function getTag(
 export async function getPlatform(
   slug: string
 ): Promise<{ platform: Platform; series: Series[] } | null> {
+  if (isSupabaseConfigured) {
+    try {
+      const { data: platData, error: platError } = await supabasePublic
+        .from('platforms')
+        .select('slug, name, url, is_official, icon')
+        .eq('slug', slug)
+        .single();
+
+      if (platError || !platData) return null;
+
+      const { data: releaseData } = await supabasePublic
+        .from('releases')
+        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
+        .eq('platform_slug', slug);
+
+      const series = (releaseData || [])
+        .map((d: any) => d.series)
+        .filter((s: any) => s && s.visibility === 'public')
+        .map((s: any) => mapSeriesRecord(s));
+
+      return {
+        platform: {
+          slug: platData.slug,
+          name: platData.name,
+          url: platData.url,
+          official: platData.is_official,
+          icon: platData.icon,
+        },
+        series,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   const platform = mockPlatforms.find((p) => p.slug === slug);
   if (!platform) return null;
 
@@ -847,6 +1020,40 @@ export async function getPlatform(
 export async function getPerson(
   id: number
 ): Promise<{ person: Person; filmography: Series[] } | null> {
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabasePublic
+        .from('people')
+        .select(`
+          id, slug, name, native_name,
+          series_people(
+            series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error || !data) return null;
+
+      const person: Person = {
+        id: Number(data.id),
+        slug: data.slug,
+        name: data.name,
+        nativeName: data.native_name,
+        role: 'actor',
+      };
+
+      const filmography = (data.series_people || [])
+        .map((sp: any) => sp.series)
+        .filter((s: any) => s && s.visibility === 'public')
+        .map((s: any) => mapSeriesRecord(s));
+
+      return { person: { ...person, dramaCount: filmography.length }, filmography };
+    } catch {
+      return null;
+    }
+  }
+
   const person = mockPeople.find((p) => p.id === id);
   if (!person) return null;
 
@@ -858,10 +1065,10 @@ export async function getPerson(
 }
 
 /**
- * Resolves active session profile
+ * Resolves active session profile - in mock mode the session is always signed out (returns null)
  */
 export async function getSession(): Promise<User | null> {
-  return mockUsers[0];
+  return null;
 }
 
 /**
@@ -875,27 +1082,27 @@ export async function getAllSeries(): Promise<Series[]> {
         .select('id, slug, title, updated_at, visibility, synopsis')
         .eq('visibility', 'public');
 
-      if (data && data.length > 0 && !error) {
-        return data.map((s) => ({
-          id: Number(s.id),
-          slug: s.slug,
-          title: s.title,
-          originalLanguage: 'zh',
-          year: 2024,
-          episodeCount: 80,
-          synopsis: s.synopsis || '',
-          updatedAt: s.updated_at ? String(s.updated_at).split('T')[0] : '2024-01-01',
-          visibility: s.visibility,
-          ratingScore: 0,
-          ratingCount: 0,
-          tags: [],
-          aliases: [],
-          releases: [],
-          cast: [],
-        }));
-      }
+      if (error || !data) return [];
+
+      return data.map((s: any) => ({
+        id: Number(s.id),
+        slug: s.slug,
+        title: s.title,
+        originalLanguage: 'zh',
+        year: 2024,
+        episodeCount: 80,
+        synopsis: s.synopsis || '',
+        updatedAt: s.updated_at ? String(s.updated_at).split('T')[0] : '2024-01-01',
+        visibility: s.visibility,
+        ratingScore: 0,
+        ratingCount: 0,
+        tags: [],
+        aliases: [],
+        releases: [],
+        cast: [],
+      }));
     } catch {
-      // Fallback
+      return [];
     }
   }
 
@@ -912,17 +1119,17 @@ export async function getAllPeople(): Promise<Person[]> {
         .from('people')
         .select('id, slug, name, native_name');
 
-      if (data && data.length > 0 && !error) {
-        return data.map((p) => ({
-          id: Number(p.id),
-          slug: p.slug,
-          name: p.name,
-          nativeName: p.native_name,
-          role: 'actor',
-        }));
-      }
+      if (error || !data) return [];
+
+      return data.map((p: any) => ({
+        id: Number(p.id),
+        slug: p.slug,
+        name: p.name,
+        nativeName: p.native_name,
+        role: 'actor',
+      }));
     } catch {
-      // Fallback
+      return [];
     }
   }
 
@@ -943,17 +1150,17 @@ export async function getAllPlatforms(): Promise<Platform[]> {
         .from('platforms')
         .select('slug, name, url, is_official, icon');
 
-      if (data && data.length > 0 && !error) {
-        return data.map((p) => ({
-          slug: p.slug,
-          name: p.name,
-          url: p.url,
-          official: p.is_official,
-          icon: p.icon,
-        }));
-      }
+      if (error || !data) return [];
+
+      return data.map((p: any) => ({
+        slug: p.slug,
+        name: p.name,
+        url: p.url,
+        official: p.is_official,
+        icon: p.icon,
+      }));
     } catch {
-      // Fallback
+      return [];
     }
   }
   return mockPlatforms;
@@ -969,14 +1176,14 @@ export async function getAllTags(): Promise<Tag[]> {
         .from('tags')
         .select('slug, name');
 
-      if (data && data.length > 0 && !error) {
-        return data.map((t) => ({
-          slug: t.slug,
-          name: t.name,
-        }));
-      }
+      if (error || !data) return [];
+
+      return data.map((t: any) => ({
+        slug: t.slug,
+        name: t.name,
+      }));
     } catch {
-      // Fallback
+      return [];
     }
   }
   return mockTags;
@@ -986,6 +1193,9 @@ export async function getAllTags(): Promise<Tag[]> {
  * Gets all reports submitted by the current user
  */
 export async function getUserReports(): Promise<UserReport[]> {
+  if (isSupabaseConfigured) {
+    return [];
+  }
   return mockReports;
 }
 
@@ -996,6 +1206,40 @@ export async function getUserProfileData(
   handleOrName: string
 ): Promise<UserProfileData | null> {
   const clean = handleOrName.toLowerCase().replace(/^@/, '');
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data: profile, error } = await supabasePublic
+        .from('profiles')
+        .select('id, handle, display_name, role, avatar_url, created_at')
+        .eq('handle', clean)
+        .single();
+
+      if (error || !profile) return null;
+
+      const user: User = {
+        id: profile.id,
+        handle: profile.handle,
+        name: profile.display_name || profile.handle,
+        role: (profile.role as any) || 'reader',
+        joinedAt: profile.created_at ? String(profile.created_at).split('T')[0] : '2024-01-01',
+      };
+
+      return {
+        user,
+        titlesListedCount: 0,
+        namesAddedCount: 0,
+        reportsAcceptedCount: 0,
+        listEntries: [],
+        ratings: [],
+        contributions: [],
+        reports: [],
+      };
+    } catch {
+      return null;
+    }
+  }
+
   const user = mockUsers.find(
     (u) =>
       u.handle.toLowerCase() === clean ||
@@ -1047,6 +1291,34 @@ export async function getUserPreferences(): Promise<UserPreferences> {
  * Gets revision history for a series
  */
 export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> {
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabasePublic
+        .from('revisions')
+        .select('*')
+        .eq('series_id', seriesId)
+        .order('created_at', { ascending: false });
+
+      if (error || !data || data.length === 0) {
+        return [];
+      }
+
+      return data.map((r: any) => ({
+        id: String(r.id),
+        seriesId: Number(r.series_id),
+        summary: r.summary || 'Metadata edit',
+        diffs: Array.isArray(r.diffs) ? r.diffs : [],
+        submittedBy: r.user_id || 'usr_unknown',
+        submittedByName: r.user_name || 'Contributor',
+        submittedByRole: r.user_role || 'editor',
+        submittedAt: r.created_at ? String(r.created_at).split('T')[0] : '2024-01-01',
+        reverted: Boolean(r.reverted),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
   const revs = mockRevisions.filter((r) => r.seriesId === seriesId);
   if (revs.length === 0) {
     return [
@@ -1076,6 +1348,37 @@ export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> 
  * Gets all pending/open moderation reports for the mod queue
  */
 export async function getAllModerationReports(): Promise<UserReport[]> {
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabasePublic
+        .from('reports')
+        .select('*')
+        .eq('status', 'open')
+        .order('created_at', { ascending: false });
+
+      if (error || !data) return [];
+
+      return data.map((r: any) => ({
+        id: String(r.id),
+        type: r.report_type || 'another_name',
+        typeName: r.report_type_name || 'Report',
+        seriesId: Number(r.series_id),
+        seriesTitle: r.series_title || 'Drama',
+        status: r.status || 'open',
+        submittedBy: r.user_id || 'usr_anon',
+        submittedAt: r.created_at ? String(r.created_at).split('T')[0] : '2024-01-01',
+        moderatorNote: r.moderator_note,
+        data: {
+          name: r.proposed_value,
+          url: r.source_url,
+          note: r.notes,
+        },
+      }));
+    } catch {
+      return [];
+    }
+  }
+
   return mockReports;
 }
 
@@ -1091,11 +1394,10 @@ export async function checkRedirect(fromId: number): Promise<number | null> {
         .eq('from_id', fromId)
         .single();
 
-      if (data && !error) {
-        return Number(data.to_id);
-      }
+      if (error || !data) return null;
+      return Number(data.to_id);
     } catch {
-      // Fallback
+      return null;
     }
   }
 
@@ -1140,6 +1442,35 @@ export async function getPlatformBySlug(slug: string): Promise<{
   platform: Platform;
   description: string;
 } | null> {
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabasePublic
+        .from('platforms')
+        .select('slug, name, url, is_official, icon')
+        .eq('slug', slug)
+        .single();
+
+      if (error || !data) return null;
+
+      const platform: Platform = {
+        slug: data.slug,
+        name: data.name,
+        url: data.url,
+        official: data.is_official,
+        icon: data.icon,
+      };
+
+      return {
+        platform,
+        description:
+          PLATFORM_DESCRIPTIONS[platform.slug] ||
+          `${platform.name} is a streaming destination featuring short vertical drama releases and localized video series.`,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   const platform = mockPlatforms.find(
     (p) => p.slug.toLowerCase() === slug.toLowerCase()
   );
@@ -1182,22 +1513,36 @@ export async function getSeriesByPlatform(
         .eq('platform_slug', platformSlug)
         .range(from, to);
 
-      if (data && !error && count !== null) {
-        const items = data
-          .map((d: any) => d.series)
-          .filter((s: any) => s && s.visibility === 'public')
-          .map((s: any) => mapSeriesRecord(s));
-
+      if (error || !data || count === null) {
         return {
-          items,
-          total: count,
+          items: [],
+          total: 0,
           page: safePage,
           pageSize: clampedPageSize,
-          totalPages: Math.max(1, Math.ceil(count / clampedPageSize)),
+          totalPages: 0,
         };
       }
+
+      const items = data
+        .map((d: any) => d.series)
+        .filter((s: any) => s && s.visibility === 'public')
+        .map((s: any) => mapSeriesRecord(s));
+
+      return {
+        items,
+        total: count,
+        page: safePage,
+        pageSize: clampedPageSize,
+        totalPages: Math.max(1, Math.ceil(count / clampedPageSize)),
+      };
     } catch {
-      // Fallback
+      return {
+        items: [],
+        total: 0,
+        page: safePage,
+        pageSize: clampedPageSize,
+        totalPages: 0,
+      };
     }
   }
 
@@ -1238,6 +1583,32 @@ export async function getTagBySlug(slug: string): Promise<{
   tag: Tag;
   description: string;
 } | null> {
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabasePublic
+        .from('tags')
+        .select('slug, name')
+        .eq('slug', slug)
+        .single();
+
+      if (error || !data) return null;
+
+      const tag: Tag = {
+        slug: data.slug,
+        name: data.name,
+      };
+
+      return {
+        tag,
+        description:
+          TAG_DESCRIPTIONS[tag.slug] ||
+          `Short vertical dramas featuring ${tag.name.toLowerCase()} tropes, themes, and storyline developments.`,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   const tag = mockTags.find((t) => t.slug.toLowerCase() === slug.toLowerCase());
   if (!tag) return null;
 
@@ -1278,22 +1649,36 @@ export async function getSeriesByTag(
         .eq('tag_slug', tagSlug)
         .range(from, to);
 
-      if (data && !error && count !== null) {
-        const items = data
-          .map((d: any) => d.series)
-          .filter((s: any) => s && s.visibility === 'public')
-          .map((s: any) => mapSeriesRecord(s));
-
+      if (error || !data || count === null) {
         return {
-          items,
-          total: count,
+          items: [],
+          total: 0,
           page: safePage,
           pageSize: clampedPageSize,
-          totalPages: Math.max(1, Math.ceil(count / clampedPageSize)),
+          totalPages: 0,
         };
       }
+
+      const items = data
+        .map((d: any) => d.series)
+        .filter((s: any) => s && s.visibility === 'public')
+        .map((s: any) => mapSeriesRecord(s));
+
+      return {
+        items,
+        total: count,
+        page: safePage,
+        pageSize: clampedPageSize,
+        totalPages: Math.max(1, Math.ceil(count / clampedPageSize)),
+      };
     } catch {
-      // Fallback
+      return {
+        items: [],
+        total: 0,
+        page: safePage,
+        pageSize: clampedPageSize,
+        totalPages: 0,
+      };
     }
   }
 
@@ -1364,27 +1749,29 @@ export async function getPersonByIdOrSlug(
 
       const { data, error } = await query.single();
 
-      if (data && !error) {
-        const person: Person = {
-          id: Number(data.id),
-          slug: data.slug,
-          name: data.name,
-          nativeName: data.native_name,
-          role: 'actor',
-        };
-
-        const credits: PersonCredit[] = (data.series_people || [])
-          .filter((sp: any) => sp.series && sp.series.visibility === 'public')
-          .map((sp: any) => ({
-            series: mapSeriesRecord(sp.series),
-            characterName: sp.character_name,
-            roleType: sp.role_type,
-          }));
-
-        return { person, credits };
+      if (error || !data) {
+        return null;
       }
+
+      const person: Person = {
+        id: Number(data.id),
+        slug: data.slug,
+        name: data.name,
+        nativeName: data.native_name,
+        role: 'actor',
+      };
+
+      const credits: PersonCredit[] = (data.series_people || [])
+        .filter((sp: any) => sp.series && sp.series.visibility === 'public')
+        .map((sp: any) => ({
+          series: mapSeriesRecord(sp.series),
+          characterName: sp.character_name,
+          roleType: sp.role_type,
+        }));
+
+      return { person, credits };
     } catch {
-      // Fallback
+      return null;
     }
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Series, Release, Alias, ReportType } from '@/src/data/types';
 import { submitReport } from '@/src/data/actions';
@@ -14,7 +14,6 @@ import { Select } from '@/src/components/ui/select';
 import { Radio } from '@/src/components/ui/radio';
 import {
   CheckCircle2,
-  ExternalLink,
   ArrowRight,
   ShieldAlert,
   UserCheck,
@@ -24,6 +23,7 @@ export interface ReportSheetProps {
   open: boolean;
   onClose: () => void;
   series: Series;
+  entry?: 'name' | 'link' | 'problem';
   initialType?: ReportType;
   targetAlias?: Alias | string;
   targetRelease?: Release;
@@ -66,21 +66,42 @@ export function ReportSheet({
   open,
   onClose,
   series,
-  initialType = 'another_name',
+  entry,
+  initialType,
   targetAlias,
   targetRelease,
 }: ReportSheetProps) {
   const { user } = useSession();
   const { showToast } = useToast();
 
-  const [selectedType, setSelectedType] = useState<ReportType>(initialType);
+  // Determine entry mode: 'name' | 'link' | 'problem'
+  const resolvedEntry =
+    entry ||
+    (initialType === 'another_name'
+      ? 'name'
+      : initialType === 'broken_link'
+      ? 'link'
+      : 'problem');
+
+  const defaultType: ReportType =
+    initialType || (resolvedEntry === 'link' ? 'broken_link' : 'another_name');
+
+  const [selectedType, setSelectedType] = useState<ReportType>(defaultType);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedReportId, setSubmittedReportId] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    if (open) {
+      setSelectedType(defaultType);
+      setFieldErrors({});
+      setSubmittedReportId(null);
+    }
+  }, [open, defaultType]);
+
   // Form Fields State
   const [aliasName, setAliasName] = useState('');
-  const [aliasLanguage, setAliasLanguage] = useState('zh');
+  const [aliasLanguage, setAliasLanguage] = useState(''); // empty by default
   const [aliasSourceUrl, setAliasSourceUrl] = useState('');
   const [aliasNote, setAliasNote] = useState('');
 
@@ -110,6 +131,22 @@ export function ReportSheet({
     setFieldErrors({});
     onClose();
   };
+
+  const showTypeChooser = resolvedEntry === 'problem';
+
+  const sheetTitle =
+    resolvedEntry === 'name'
+      ? 'Report a name'
+      : resolvedEntry === 'link'
+      ? 'Report a link'
+      : 'Report a problem';
+
+  const submitButtonLabel =
+    resolvedEntry === 'name'
+      ? 'Report a name'
+      : resolvedEntry === 'link'
+      ? 'Report a link'
+      : 'Report a problem';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,7 +206,6 @@ export function ReportSheet({
         setSubmittedReportId(result.reportId);
         showToast({
           title: 'Report sent',
-          description: 'Thank you for contributing to the reference catalog.',
           type: 'success',
         });
       } else if (result.errors) {
@@ -184,13 +220,16 @@ export function ReportSheet({
     <Dialog
       open={open}
       onClose={handleClose}
-      title="Report an update"
-      description={`Contributing reference data for "${series.title}".`}
+      title={sheetTitle}
       maxWidth="md"
       footer={
         submittedReportId ? (
           <Button variant="secondary" size="sm" onClick={handleClose}>
             Close
+          </Button>
+        ) : !user ? (
+          <Button variant="quiet" size="sm" onClick={handleClose}>
+            Cancel
           </Button>
         ) : (
           <>
@@ -203,15 +242,15 @@ export function ReportSheet({
               isLoading={isSubmitting}
               onClick={handleSubmit}
             >
-              Send report
+              {submitButtonLabel}
             </Button>
           </>
         )
       }
     >
-      {/* Confirmation View after successful submission */}
+      {/* 1. Confirmation View after successful submission */}
       {submittedReportId ? (
-        <div className="py-4 space-y-4 text-left">
+        <div className="py-3 space-y-4 text-left">
           <div className="p-4 bg-[var(--status-verified-bg)] border border-[var(--status-verified)]/20 rounded-[8px] flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-[var(--status-verified)] shrink-0 mt-0.5" />
             <div className="space-y-1">
@@ -240,69 +279,91 @@ export function ReportSheet({
               onClick={() => {
                 setSubmittedReportId(null);
                 setAliasName('');
+                setAliasSourceUrl('');
+                setAliasNote('');
               }}
             >
               Submit another report
             </Button>
           </div>
         </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-5 text-left">
-          {/* Step 1: Report Type Radio Options */}
-          <div className="space-y-2">
-            <label className="text-[13px] font-semibold text-[var(--ink)] block">
-              What would you like to report?
-            </label>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {REPORT_TYPE_OPTIONS.map((opt) => (
-                <div
-                  key={opt.type}
-                  onClick={() => setSelectedType(opt.type)}
-                  className={`p-2.5 rounded-[8px] border cursor-pointer transition-colors flex items-start gap-2.5 ${
-                    selectedType === opt.type
-                      ? 'border-[var(--crimson)] bg-[var(--crimson-subtle)]'
-                      : 'border-[var(--line)] hover:border-[var(--line-strong)] bg-[var(--surface)]'
-                  }`}
-                >
-                  <Radio
-                    name="report_type_selection"
-                    checked={selectedType === opt.type}
-                    onChange={() => setSelectedType(opt.type)}
-                    className="mt-0.5"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[13px] font-medium text-[var(--ink)] block leading-snug">
-                      {opt.label}
-                    </span>
-                    <span className="text-[11px] text-[var(--muted)] line-clamp-1 mt-0.5">
-                      {opt.description}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Takedown Option */}
-            <div className="pt-1">
-              <Link
-                href="/takedown"
-                onClick={handleClose}
-                className="inline-flex items-center gap-1 text-[12px] text-[var(--muted)] hover:text-[var(--crimson)] hover:underline"
-              >
-                <ShieldAlert className="w-3.5 h-3.5" />
-                <span>Copyright owner? Submit a Takedown request</span>
-                <ExternalLink className="w-3 h-3" />
-              </Link>
-            </div>
+      ) : !user ? (
+        /* 2. Signed-Out Prompt */
+        <div className="py-6 text-center space-y-4">
+          <p className="text-[14px] text-[var(--ink)]">
+            {resolvedEntry === 'link'
+              ? 'Sign in to report a link.'
+              : resolvedEntry === 'problem'
+              ? 'Sign in to report a problem.'
+              : 'Sign in to report a name.'}
+          </p>
+          <div>
+            <Link href="/sign-in" onClick={handleClose}>
+              <Button variant="primary" size="md">
+                Sign in
+              </Button>
+            </Link>
           </div>
+        </div>
+      ) : (
+        /* 3. Signed-In Contributor Form */
+        <form onSubmit={handleSubmit} className="space-y-4 text-left w-full min-w-0">
+          {/* Step 1: Type Chooser (Only visible when entry is 'problem') */}
+          {showTypeChooser && (
+            <div className="space-y-2 w-full min-w-0">
+              <label className="text-[13px] font-semibold text-[var(--ink)] block">
+                What would you like to report?
+              </label>
 
-          <div className="border-t border-[var(--line)] pt-4 space-y-3.5">
-            {/* Type 1: Another Name */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {REPORT_TYPE_OPTIONS.map((opt) => (
+                  <div
+                    key={opt.type}
+                    onClick={() => setSelectedType(opt.type)}
+                    className={`p-2.5 rounded-[8px] border cursor-pointer transition-colors flex items-start gap-2.5 ${
+                      selectedType === opt.type
+                        ? 'border-[var(--crimson)] bg-[var(--crimson-subtle)]'
+                        : 'border-[var(--line)] hover:border-[var(--line-strong)] bg-[var(--surface)]'
+                    }`}
+                  >
+                    <Radio
+                      name="report_type_selection"
+                      checked={selectedType === opt.type}
+                      onChange={() => setSelectedType(opt.type)}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[13px] font-medium text-[var(--ink)] block leading-snug">
+                        {opt.label}
+                      </span>
+                      <span className="text-[11px] text-[var(--muted)] line-clamp-1 mt-0.5">
+                        {opt.description}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Takedown Option (Internal link, no external icon) */}
+              <div className="pt-1">
+                <Link
+                  href="/takedown"
+                  onClick={handleClose}
+                  className="inline-flex items-center gap-1.5 text-[12px] text-[var(--muted)] hover:text-[var(--crimson)] hover:underline"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>Copyright owner? Submit a takedown request</span>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          <div className={showTypeChooser ? 'border-t border-[var(--line)] pt-3.5 space-y-3.5 w-full min-w-0' : 'space-y-3.5 w-full min-w-0'}>
+            {/* Type 1: Name Form (Another Name) */}
             {selectedType === 'another_name' && (
               <>
                 <TextField
-                  label="Title or Alias Name"
+                  label="Name"
                   placeholder="e.g. 霸总的契约娇妻 / The Secret Matriarch"
                   value={aliasName}
                   onChange={(e) => setAliasName(e.target.value)}
@@ -310,31 +371,45 @@ export function ReportSheet({
                   autoFocus
                   required
                 />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Select
-                    label="Language"
-                    value={aliasLanguage}
-                    onChange={(e) => setAliasLanguage(e.target.value)}
-                    options={[
-                      { value: 'zh', label: 'Chinese (中文)' },
-                      { value: 'en', label: 'English' },
-                      { value: 'ko', label: 'Korean (한국어)' },
-                      { value: 'es', label: 'Spanish (Español)' },
-                      { value: 'ja', label: 'Japanese (日本語)' },
-                      { value: 'pt', label: 'Portuguese' },
-                    ]}
-                  />
-                  <TextField
-                    label="Where you saw it (optional)"
-                    placeholder="e.g. Lumen TV app search, YouTube playlist"
-                    value={aliasSourceUrl}
-                    onChange={(e) => setAliasSourceUrl(e.target.value)}
-                  />
-                </div>
+                <Select
+                  label="Language"
+                  value={aliasLanguage}
+                  onChange={(e) => setAliasLanguage(e.target.value)}
+                  errorMessage={fieldErrors.language}
+                  options={[
+                    { value: '', label: 'Select language' },
+                    { value: 'zh', label: 'Chinese (中文)' },
+                    { value: 'en', label: 'English' },
+                    { value: 'ko', label: 'Korean (한국어)' },
+                    { value: 'es', label: 'Spanish (Español)' },
+                    { value: 'ja', label: 'Japanese (日本語)' },
+                    { value: 'pt', label: 'Portuguese' },
+                    { value: 'th', label: 'Thai' },
+                    { value: 'vi', label: 'Vietnamese' },
+                    { value: 'id', label: 'Indonesian' },
+                  ]}
+                />
+                <TextField
+                  label="Source link"
+                  type="url"
+                  placeholder="https://example.com/source"
+                  value={aliasSourceUrl}
+                  onChange={(e) => setAliasSourceUrl(e.target.value)}
+                  errorMessage={fieldErrors.url}
+                  helperText="Required. Valid http:// or https:// URL where this name appears."
+                  required
+                />
+                <Textarea
+                  label="Note"
+                  placeholder="Optional notes or context..."
+                  value={aliasNote}
+                  onChange={(e) => setAliasNote(e.target.value)}
+                  rows={3}
+                />
               </>
             )}
 
-            {/* Type 2: This Name is Wrong */}
+            {/* Type 2: Wrong Name */}
             {selectedType === 'wrong_name' && (
               <>
                 <Select
@@ -360,11 +435,11 @@ export function ReportSheet({
                   ]}
                 />
                 <Textarea
-                  label="Notes or Evidence"
+                  label="Note"
                   placeholder="Explain why this name is incorrect..."
                   value={wrongNote}
                   onChange={(e) => setWrongNote(e.target.value)}
-                  rows={2}
+                  rows={3}
                 />
               </>
             )}
@@ -382,7 +457,7 @@ export function ReportSheet({
                   required
                 />
                 <Textarea
-                  label="Evidence Note"
+                  label="Note"
                   placeholder="Provide reasons, character names, or release links demonstrating they are the same or different dramas."
                   value={mergeEvidence}
                   onChange={(e) => setMergeEvidence(e.target.value)}
@@ -416,7 +491,8 @@ export function ReportSheet({
                   required
                 />
                 <TextField
-                  label="Source URL (optional)"
+                  label="Source link"
+                  type="url"
                   placeholder="https://example.com/official-credits..."
                   value={detailSourceUrl}
                   onChange={(e) => setDetailSourceUrl(e.target.value)}
@@ -424,11 +500,11 @@ export function ReportSheet({
               </>
             )}
 
-            {/* Type 6: Link is Broken or Wrong */}
+            {/* Type 6: Link Form (Broken or Wrong Link) */}
             {selectedType === 'broken_link' && (
               <>
                 <Select
-                  label="Affected Release Platform"
+                  label="Platform"
                   value={releasePlatform}
                   onChange={(e) => setReleasePlatform(e.target.value)}
                   errorMessage={fieldErrors.releasePlatform}
@@ -438,32 +514,41 @@ export function ReportSheet({
                   }))}
                 />
                 <TextField
-                  label="Working replacement URL (optional)"
+                  label="Source link"
+                  type="url"
                   placeholder="https://example.com/watch/series..."
                   value={replacementUrl}
                   onChange={(e) => setReplacementUrl(e.target.value)}
-                  helperText="If you know where to watch this legally, paste the new link"
+                  helperText="Working replacement URL if available"
                 />
                 <Textarea
-                  label="Additional notes (optional)"
+                  label="Note"
                   placeholder="e.g. Geoblocked, video removed, paywall error..."
                   value={brokenNote}
                   onChange={(e) => setBrokenNote(e.target.value)}
-                  rows={2}
+                  rows={3}
                 />
               </>
             )}
           </div>
 
-          {/* User Sign-in Status Prompt */}
+          {/* User Sign-in Status Display (Signed in only) */}
           <div className="pt-2 border-t border-[var(--line)] flex items-center justify-between text-[12px] text-[var(--muted)]">
             <div className="flex items-center gap-1.5">
               <UserCheck className="w-3.5 h-3.5 text-[var(--muted)]" />
               <span>
-                Submitting as <strong className="text-[var(--ink)] font-semibold">{user?.name || 'Guest Contributor'}</strong> ({user?.role || 'reader'})
+                Signed in as <strong className="text-[var(--ink)] font-semibold">{user.name}</strong>
               </span>
             </div>
-            <span className="text-[11px] text-[var(--muted)]">Form data preserved</span>
+            {!showTypeChooser && (
+              <Link
+                href="/takedown"
+                onClick={handleClose}
+                className="text-[11px] text-[var(--muted)] hover:text-[var(--crimson)] hover:underline"
+              >
+                Takedown request
+              </Link>
+            )}
           </div>
         </form>
       )}

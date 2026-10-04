@@ -1,7 +1,7 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
-import { getUserProfileData, getSession } from '@/src/data/repository';
+import { getUserProfileData } from '@/src/data/repository';
 import { siteConfig } from '@/src/config/site';
 import { ProfileTabs } from '@/src/components/profile/profile-tabs';
 import { Breadcrumb } from '@/src/components/ui/breadcrumb';
@@ -40,14 +40,12 @@ export async function generateMetadata({
 export default async function UserProfilePage({ params }: UserPageProps) {
   const { handle } = await params;
   const profileData = await getUserProfileData(handle);
-  const sessionUser = await getSession();
 
   if (!profileData) {
     notFound();
   }
 
   const { user, titlesListedCount, namesAddedCount, reportsAcceptedCount } = profileData;
-  const isOwner = sessionUser?.id === user.id;
 
   return (
     <div className="space-y-6 pb-16 text-left max-w-4xl mx-auto">
@@ -118,7 +116,7 @@ export default async function UserProfilePage({ params }: UserPageProps) {
       </header>
 
       {/* Tabs: Lists, Ratings, Contributions, Reports */}
-      <ProfileTabs profileData={profileData} isOwner={isOwner} />
+      <ProfileTabs profileData={profileData} />
     </div>
   );
 }

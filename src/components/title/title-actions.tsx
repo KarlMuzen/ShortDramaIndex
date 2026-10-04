@@ -58,39 +58,37 @@ export function TitleActions({ series }: TitleActionsProps) {
   };
 
   return (
-    <div className="flex flex-col gap-2 w-full">
-      {/* 1. Add to list (Sole primary button) */}
+    <div className="flex flex-wrap items-center gap-2 w-full">
+      {/* 1. Add to list (Primary button) */}
       <Button
         variant="primary"
         size="md"
-        fullWidth
         onClick={() => setListDialogOpen(true)}
         leftIcon={<Bookmark className="w-4 h-4" />}
+        className="flex-1 min-w-[130px]"
       >
         {listStatus ? statusDisplayLabels[listStatus] : 'Add to list'}
       </Button>
 
-      <div className="grid grid-cols-2 gap-2">
-        {/* 2. Rate (Secondary button) */}
-        <Button
-          variant="secondary"
-          size="md"
-          onClick={() => setRateDialogOpen(true)}
-          leftIcon={<Star className="w-4 h-4 text-[var(--muted)]" />}
-        >
-          {userRating > 0 ? `${userRating}/10` : 'Rate'}
-        </Button>
+      {/* 2. Rate (Secondary button) */}
+      <Button
+        variant="secondary"
+        size="md"
+        onClick={() => setRateDialogOpen(true)}
+        leftIcon={<Star className="w-4 h-4 text-[var(--muted)]" />}
+      >
+        {userRating > 0 ? `${userRating}/10` : 'Rate'}
+      </Button>
 
-        {/* 3. Report (Quiet button) */}
-        <Button
-          variant="quiet"
-          size="md"
-          onClick={() => setReportSheetOpen(true)}
-          leftIcon={<Flag className="w-4 h-4 text-[var(--muted)]" />}
-        >
-          Report
-        </Button>
-      </div>
+      {/* 3. Report a problem (Secondary button) */}
+      <Button
+        variant="secondary"
+        size="md"
+        onClick={() => setReportSheetOpen(true)}
+        leftIcon={<Flag className="w-4 h-4 text-[var(--muted)]" />}
+      >
+        Report a problem
+      </Button>
 
       {/* List Status Picker Dialog */}
       <Dialog
@@ -152,7 +150,7 @@ export function TitleActions({ series }: TitleActionsProps) {
         open={reportSheetOpen}
         onClose={() => setReportSheetOpen(false)}
         series={series}
-        initialType="another_name"
+        entry="problem"
       />
     </div>
   );

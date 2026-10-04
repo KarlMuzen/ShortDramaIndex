@@ -186,13 +186,13 @@ export function TitleHistoryView({
 
                     <div className="space-y-1 font-mono text-[12px]">
                       {/* Old Value */}
-                      <div className="p-2 bg-[var(--status-disputed-bg)] border border-[var(--crimson)]/20 rounded-[4px] text-[var(--crimson)]">
+                      <div className="p-2 bg-[var(--status-disputed-bg)] border border-[var(--crimson)]/20 rounded-[4px] text-[var(--crimson)] break-words">
                         <span className="font-bold select-none mr-2">-</span>
                         <span>{diff.oldValue}</span>
                       </div>
 
                       {/* New Value */}
-                      <div className="p-2 bg-[var(--status-verified-bg)] border border-[var(--status-verified)]/20 rounded-[4px] text-[var(--status-verified)]">
+                      <div className="p-2 bg-[var(--status-verified-bg)] border border-[var(--status-verified)]/20 rounded-[4px] text-[var(--status-verified)] break-words">
                         <span className="font-bold select-none mr-2">+</span>
                         <span>{diff.newValue}</span>
                       </div>
