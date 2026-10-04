@@ -1917,6 +1917,7 @@ export async function getPersonByIdOrSlug(
       if (error || !data) {
         return null;
       }
+      if (!data.short_id) throw new Error('short_id missing in select');
 
       const person: Person = {
         id: Number(data.id),
