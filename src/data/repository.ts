@@ -1117,7 +1117,7 @@ export async function getPerson(
       const { data, error } = await supabasePublic
         .from('people')
         .select(`
-          id, slug, name, native_name,
+          id, short_id, slug, name, native_name,
           series_people(
             series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)
           )
@@ -1127,9 +1127,11 @@ export async function getPerson(
 
       if (error) logDataError('repository', error);
       if (error || !data) return null;
+      if (!data.short_id) throw new Error('short_id missing in select');
 
       const person: Person = {
         id: Number(data.id),
+        shortId: data.short_id,
         slug: data.slug,
         name: data.name,
         nativeName: data.native_name,
