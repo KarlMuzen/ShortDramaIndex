@@ -100,7 +100,8 @@ function isValidUrl(str: string): boolean {
     const formatted = str.startsWith('http') ? str : `https://${str}`;
     new URL(formatted);
     return true;
-  } catch {
+  } catch (error) {
+      logDataError('repository', error);
     return false;
   }
 }
@@ -150,7 +151,8 @@ function getRelativeTimeString(dateStr: string): string {
     if (diffWeeks < 5) return `${diffWeeks}w ago`;
     const diffMonths = Math.round(diffDays / 30);
     return `${diffMonths}mo ago`;
-  } catch {
+  } catch (error) {
+      logDataError('repository', error);
     return 'recently';
   }
 }
@@ -349,7 +351,8 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         browsePlatforms: (platformsData || []) as Platform[],
         browseLanguages,
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return {
         popularThisWeek: [],
         recentlyAddedAliases: [],
@@ -639,7 +642,8 @@ export async function searchSeries(params: {
         totalPages: Math.max(1, Math.ceil(total / clampedPageSize)),
         isUrlSearch: false,
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return {
         items: [],
         total: 0,
@@ -854,7 +858,8 @@ export async function getSeriesById(idOrShortId: number | string): Promise<Serie
         return null;
       }
       return mapSeriesRecord(data);
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -900,7 +905,8 @@ export async function getRelatedSeries(
         .map((d: any) => d.series)
         .filter((s: any) => s && s.visibility === 'public')
         .map((s: any) => mapSeriesRecord(s));
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return [];
     }
   }
@@ -967,13 +973,14 @@ export async function lookupLink(
         episodeCount: releaseData.episode_count,
         releasedYear: releaseData.released_year,
         url: releaseData.url,
-        lastChecked: 'Today',
+        lastChecked: releaseData.last_checked ? String(releaseData.last_checked).split('T')[0] : '',
         linkStatus: releaseData.link_status || 'active',
         isOfficial: Boolean(releaseData.is_official),
       };
 
       return { series, release };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -1027,7 +1034,8 @@ export async function getTag(
         tag: { slug: tagData.slug, name: tagData.name, count: series.length },
         series,
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -1080,7 +1088,8 @@ export async function getPlatform(
         },
         series,
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -1132,7 +1141,8 @@ export async function getPerson(
         .map((s: any) => mapSeriesRecord(s));
 
       return { person: { ...person, dramaCount: filmography.length }, filmography };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -1285,7 +1295,8 @@ export async function getAllPlatforms(): Promise<Platform[]> {
         official: p.is_official,
         icon: p.icon,
       }));
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return [];
     }
   }
@@ -1311,7 +1322,8 @@ export async function getAllTags(): Promise<Tag[]> {
         slug: t.slug,
         name: t.name,
       }));
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return [];
     }
   }
@@ -1367,7 +1379,8 @@ export async function getUserProfileData(
         contributions: [],
         reports: [],
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -1451,7 +1464,8 @@ export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> 
         submittedAt: r.created_at ? String(r.created_at).split('T')[0] : '2024-01-01',
         reverted: Boolean(r.reverted),
       }));
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return [];
     }
   }
@@ -1514,7 +1528,8 @@ export async function getAllModerationReports(): Promise<UserReport[]> {
           note: r.notes,
         },
       }));
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return [];
     }
   }
@@ -1541,7 +1556,8 @@ export async function checkRedirect(fromIdOrShortId: number | string): Promise<n
       if (error) logDataError('repository', error);
       if (error || !data) return null;
       return Number(data.to_id);
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -1622,7 +1638,8 @@ export async function getPlatformBySlug(slug: string): Promise<{
           PLATFORM_DESCRIPTIONS[platform.slug] ||
           `${platform.name} is a streaming destination featuring short drama releases and localized video series.`,
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -1696,7 +1713,8 @@ export async function getSeriesByPlatform(
         pageSize: clampedPageSize,
         totalPages: Math.max(1, Math.ceil(count / clampedPageSize)),
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return {
         items: [],
         total: 0,
@@ -1768,7 +1786,8 @@ export async function getTagBySlug(slug: string): Promise<{
           TAG_DESCRIPTIONS[tag.slug] ||
           `Short dramas featuring ${tag.name.toLowerCase()} tropes, themes, and storyline developments.`,
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -1840,7 +1859,8 @@ export async function getSeriesByTag(
         pageSize: clampedPageSize,
         totalPages: Math.max(1, Math.ceil(count / clampedPageSize)),
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return {
         items: [],
         total: 0,
@@ -1938,7 +1958,8 @@ export async function getPersonByIdOrSlug(
         }));
 
       return { person, credits };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
