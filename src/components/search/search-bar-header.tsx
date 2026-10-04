@@ -31,7 +31,7 @@ export function SearchBarHeader({
   const [pasteLinkOpen, setPasteLinkOpen] = useState(false);
   const [pasteLinkInput, setPasteLinkInput] = useState('');
 
-  const currentSort = searchParams.get('sort') || 'relevance';
+  const currentSort = searchParams?.get('sort') || 'relevance';
 
   // Count active filters (excluding query, sort, page)
   const activeFilterCount = [
@@ -41,11 +41,11 @@ export function SearchBarHeader({
     'year',
     'status',
     'episodes',
-  ].filter((key) => Boolean(searchParams.get(key))).length;
+  ].filter((key) => Boolean(searchParams?.get(key))).length;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
     if (query.trim()) {
       params.set('q', query.trim());
     } else {
@@ -56,7 +56,7 @@ export function SearchBarHeader({
   };
 
   const handleSortChange = (newSort: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
     if (newSort && newSort !== 'relevance') {
       params.set('sort', newSort);
     } else {
@@ -94,7 +94,7 @@ export function SearchBarHeader({
               type="button"
               onClick={() => {
                 setQuery('');
-                const params = new URLSearchParams(searchParams.toString());
+                const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
                 params.delete('q');
                 params.delete('page');
                 router.push(`${pathname}?${params.toString()}`);

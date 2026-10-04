@@ -25,12 +25,12 @@ export function SearchFilters({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const currentPlatform = searchParams.get('platform') || '';
-  const currentLang = searchParams.get('lang') || '';
-  const currentTag = searchParams.get('tag') || '';
-  const currentYear = searchParams.get('year') || '';
-  const currentStatus = searchParams.get('status') || '';
-  const currentEpisodeRange = searchParams.get('episodes') || '';
+  const currentPlatform = searchParams?.get('platform') || '';
+  const currentLang = searchParams?.get('lang') || '';
+  const currentTag = searchParams?.get('tag') || '';
+  const currentYear = searchParams?.get('year') || '';
+  const currentStatus = searchParams?.get('status') || '';
+  const currentEpisodeRange = searchParams?.get('episodes') || '';
 
   const hasActiveFilters = Boolean(
     currentPlatform ||
@@ -42,7 +42,7 @@ export function SearchFilters({
   );
 
   const updateParam = (key: string, value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
     if (value) {
       params.set(key, value);
     } else {
@@ -54,7 +54,7 @@ export function SearchFilters({
   };
 
   const clearAllFilters = () => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
     params.delete('platform');
     params.delete('lang');
     params.delete('tag');

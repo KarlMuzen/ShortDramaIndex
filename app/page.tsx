@@ -8,6 +8,8 @@ import { EmptyState } from '@/src/components/ui/empty-state';
 import { HeroSearch } from '@/src/components/home/hero-search';
 import { Sparkles, Clock, Globe2, Tag as TagIcon, Tv } from 'lucide-react';
 
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: siteConfig.name,
   description: `${siteConfig.name} is the reference database for short vertical dramas, cataloging all names, aliases, and official where-to-watch sources.`,

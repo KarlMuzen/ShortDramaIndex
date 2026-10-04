@@ -23,7 +23,15 @@ import { TitleNav } from '@/src/components/title/title-nav';
 import { CommunityStats } from '@/src/components/title/community-stats';
 import { TitleFooterHistory } from '@/src/components/title/title-footer-history';
 
-export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const seriesList = await getAllSeries();
+  return seriesList.map((series) => ({
+    slug: `${series.id}-${series.slug}`,
+  }));
+}
 
 interface TitlePageProps {
   params: Promise<{

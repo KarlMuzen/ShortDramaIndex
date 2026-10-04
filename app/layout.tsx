@@ -1,10 +1,4 @@
 import type { Metadata } from 'next';
-import {
-  Schibsted_Grotesk,
-  Noto_Sans_SC,
-  Noto_Sans_JP,
-  Noto_Sans_KR,
-} from 'next/font/google';
 import './globals.css';
 import { siteConfig } from '@/src/config/site';
 import { SessionProvider } from '@/src/context/session-context';
@@ -12,37 +6,6 @@ import { ThemeProvider } from '@/src/context/theme-context';
 import { ToastProvider } from '@/src/components/ui/toast';
 import { Header } from '@/src/components/layout/header';
 import { Footer } from '@/src/components/layout/footer';
-
-const mainFont = Schibsted_Grotesk({
-  subsets: ['latin'],
-  weight: ['400', '600'],
-  display: 'swap',
-  variable: '--font-main',
-});
-
-const notoSansSC = Noto_Sans_SC({
-  subsets: ['latin'],
-  weight: ['400', '600'],
-  display: 'swap',
-  preload: false,
-  variable: '--font-cjk-sc',
-});
-
-const notoSansJP = Noto_Sans_JP({
-  subsets: ['latin'],
-  weight: ['400', '600'],
-  display: 'swap',
-  preload: false,
-  variable: '--font-cjk-jp',
-});
-
-const notoSansKR = Noto_Sans_KR({
-  subsets: ['latin'],
-  weight: ['400', '600'],
-  display: 'swap',
-  preload: false,
-  variable: '--font-cjk-kr',
-});
 
 export const metadata: Metadata = {
   title: {
@@ -96,18 +59,15 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${mainFont.variable} ${notoSansSC.variable} ${notoSansJP.variable} ${notoSansKR.variable}`}
     >
-      <head>
-        <script
-          id="theme-init-script"
-          dangerouslySetInnerHTML={{ __html: themeInitScript }}
-        />
-      </head>
       <body
         suppressHydrationWarning
         className="min-h-screen flex flex-col bg-[var(--paper)] text-[var(--ink)] antialiased"
       >
+        <script
+          id="theme-init-script"
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
         <ThemeProvider>
           <SessionProvider>
             <ToastProvider>

@@ -20,7 +20,7 @@ export function SearchPagination({
   if (totalPages <= 1) return null;
 
   const handlePageChange = (page: number) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
     if (page > 1) {
       params.set('page', page.toString());
     } else {
