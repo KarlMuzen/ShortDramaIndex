@@ -61,6 +61,7 @@ export async function lookupLinkAction(url: string): Promise<{
   series?: {
     id: number;
     slug: string;
+    shortId: string;
     title: string;
     year: number;
     episodeCount: number;
@@ -85,6 +86,7 @@ export async function lookupLinkAction(url: string): Promise<{
     series: {
       id: result.series.id,
       slug: result.series.slug,
+      shortId: result.series.shortId,
       title: result.series.title,
       year: result.series.year,
       episodeCount: result.series.episodeCount,
