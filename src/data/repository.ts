@@ -280,7 +280,10 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         .select('slug, name, url, is_official')
         .limit(10);
 
-      if (popError) logDataError('repository', popError);
+      if (popError) logDataError('getHomePageFeed: popular series query', popError);
+      if (aliasError) logDataError('getHomePageFeed: aliases query', aliasError);
+      if (tagsError) logDataError('getHomePageFeed: tags query', tagsError);
+      if (platError) logDataError('getHomePageFeed: platforms query', platError);
       if (popError || aliasError || tagsError || platError) {
         return {
           popularThisWeek: [],
@@ -1488,23 +1491,51 @@ export async function getAllModerationReports(): Promise<UserReport[]> {
  * Checks if a title ID or shortId has been merged/redirected
  */
 export async function checkRedirect(fromIdOrShortId: number | string): Promise<number | string | null> {
-
   if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('checkRedirect', null);
+
   const isNumeric = typeof fromIdOrShortId === 'number' || /^\d+$/.test(String(fromIdOrShortId));
 
   if (isSupabaseConfigured) {
-    try {
-      let query = supabasePublic.from('redirects').select('to_id');
-      if (isNumeric) {
-        query = query.eq('from_id', Number(fromIdOrShortId));
-      }
+    if (isNumeric) {
+      try {
+        const { data, error } = await supabasePublic
+          .from('redirects')
+          .select('to_id')
+          .eq('from_id', Number(fromIdOrShortId))
+          .single();
 
-      const { data, error } = await query.single();
-      if (error) logDataError('repository', error);
-      if (error || !data) return null;
-      return Number(data.to_id);
+        if (error) {
+          logDataError('checkRedirect: numeric redirect query', error);
+          return null;
+        }
+        if (!data) return null;
+        return Number(data.to_id);
+      } catch (error) {
+        logDataError('checkRedirect: numeric redirect query', error);
+        return null;
+      }
+    }
+
+    try {
+      const { data, error } = await supabasePublic.rpc('resolve_title_redirect', {
+        p_short_id: String(fromIdOrShortId),
+      });
+
+      if (error) {
+        logDataError('checkRedirect: resolve_title_redirect RPC', error);
+        return null;
+      }
+      if (data == null) return null;
+
+      const value = Array.isArray(data) ? data[0] : data;
+      const toId =
+        typeof value === 'object' && value !== null
+          ? (value.to_id ?? value.resolve_title_redirect)
+          : value;
+
+      return toId == null ? null : Number(toId);
     } catch (error) {
-      logDataError('repository', error);
+      logDataError('checkRedirect: resolve_title_redirect RPC', error);
       return null;
     }
   }
