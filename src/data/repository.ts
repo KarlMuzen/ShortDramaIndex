@@ -868,7 +868,7 @@ export async function getRelatedSeries(
 
       const { data, error } = await supabasePublic
         .from('series_tags')
-        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
         .in('tag_slug', tagSlugs)
         .neq('series_id', id)
         .limit(limit);
@@ -987,7 +987,7 @@ export async function getTag(
 
       const { data: seriesData } = await supabasePublic
         .from('series_tags')
-        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
         .eq('tag_slug', slug);
 
       const series = (seriesData || [])
@@ -1031,7 +1031,7 @@ export async function getPlatform(
 
       const { data: releaseData } = await supabasePublic
         .from('releases')
-        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
         .eq('platform_slug', slug);
 
       const series = (releaseData || [])
@@ -1811,7 +1811,7 @@ export async function getPersonByIdOrSlug(
 
       const person: Person = {
         id: Number(data.id),
-        shortId: data.short_id || String(data.id),
+        shortId: data.short_id,
         slug: data.slug,
         name: data.name,
         nativeName: data.native_name,
