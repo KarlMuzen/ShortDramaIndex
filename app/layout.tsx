@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { siteConfig } from '@/src/config/site';
 import { SessionProvider } from '@/src/context/session-context';
@@ -6,6 +6,14 @@ import { ThemeProvider } from '@/src/context/theme-context';
 import { ToastProvider } from '@/src/components/ui/toast';
 import { Header } from '@/src/components/layout/header';
 import { Footer } from '@/src/components/layout/footer';
+import { ServiceWorkerRegister } from '@/src/components/pwa/ServiceWorkerRegister';
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F6F7F9' },
+    { media: '(prefers-color-scheme: dark)', color: '#0F1117' },
+  ],
+};
 
 export const metadata: Metadata = {
   title: {
@@ -25,6 +33,11 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: siteConfig.name,
     description: siteConfig.description,
+  },
+  appleWebApp: {
+    capable: true,
+    title: siteConfig.name,
+    statusBarStyle: 'default',
   },
 };
 
@@ -71,6 +84,7 @@ export default function RootLayout({
         <ThemeProvider>
           <SessionProvider>
             <ToastProvider>
+              <ServiceWorkerRegister />
               <Header />
               <main className="flex-1 w-full max-w-[1120px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
                 {children}
