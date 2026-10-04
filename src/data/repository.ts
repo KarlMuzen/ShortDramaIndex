@@ -398,11 +398,11 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
   }
 
   const browseLanguages: BrowseLanguage[] = [
-    { code: 'zh', label: 'Chinese', nativeLabel: '中文', count: languageCounts['zh'] || 0 },
-    { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: languageCounts['ko'] || 0 },
-    { code: 'en', label: 'English', nativeLabel: 'English', count: languageCounts['en'] || 0 },
-    { code: 'es', label: 'Spanish', nativeLabel: 'Español', count: languageCounts['es'] || 0 },
-    { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: languageCounts['ja'] || 0 },
+    { code: 'zh', label: 'Chinese', nativeLabel: '中文', count: languageCounts['zh'] || undefined },
+    { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: languageCounts['ko'] || undefined },
+    { code: 'en', label: 'English', nativeLabel: 'English', count: languageCounts['en'] || undefined },
+    { code: 'es', label: 'Spanish', nativeLabel: 'Español', count: languageCounts['es'] || undefined },
+    { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: languageCounts['ja'] || undefined },
   ];
 
   return {
