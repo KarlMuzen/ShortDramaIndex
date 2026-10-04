@@ -260,7 +260,7 @@ export async function submitReport(input: SubmitReportInput): Promise<SubmitRepo
     (r) => r.submittedAt === new Date().toISOString().split('T')[0]
   );
   if (todayReports.length >= 10) {
-    return { success: false, errors: { general: 'Daily report limit reached (maximum 10 reports per day). Please try again tomorrow.') } };
+    return { success: false, errors: { general: 'Daily report limit reached (maximum 10 reports per day). Please try again tomorrow.' } };
   }
 
   const newId = `rep_${Date.now()}`;
