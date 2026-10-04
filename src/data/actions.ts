@@ -20,7 +20,8 @@ import {
   Tag,
   Revision,
 } from './types';
-import { lookupLink } from './repository';
+import { lookupLink, logDataError } from './repository';
+import { allowMockData, isSupabaseConfigured } from './supabase-public';
 
 function isValidHttpUrl(str?: string): boolean {
   if (!str) return false;
@@ -124,6 +125,27 @@ export interface SubmitReportResult {
   message?: string;
 }
 
+function trimmedReportData(input: SubmitReportInput['data']): SubmitReportInput['data'] {
+  const result: SubmitReportInput['data'] = {};
+  const add = (key: keyof SubmitReportInput['data'], value: string | undefined, max: number) => {
+    if (value !== undefined) result[key] = value.trim().slice(0, max);
+  };
+
+  add('name', input.name, 200);
+  add('targetAlias', input.targetAlias, 200);
+  add('reason', input.reason, 200);
+  add('otherSeriesTitle', input.otherSeriesTitle, 200);
+  add('field', input.field, 200);
+  add('releasePlatform', input.releasePlatform, 200);
+  add('language', input.language, 10);
+  add('url', input.url, 1000);
+  add('replacementUrl', input.replacementUrl, 1000);
+  add('note', input.note, 1000);
+  add('proposedValue', input.proposedValue, 1000);
+
+  return result;
+}
+
 const typeDisplayNames: Record<ReportType, string> = {
   another_name: 'Another name for this drama',
   wrong_name: 'This name is wrong',
@@ -139,78 +161,60 @@ const typeDisplayNames: Record<ReportType, string> = {
 export async function submitReport(input: SubmitReportInput): Promise<SubmitReportResult> {
   const errors: Record<string, string> = {};
 
-  // 1. Validation & length limits
   if (input.type === 'another_name') {
-    if (!input.data.name || !input.data.name.trim()) {
-      errors.name = 'Please enter the title or alias name.';
-    } else if (input.data.name.length > 200) {
-      errors.name = 'Name must not exceed 200 characters.';
-    }
-
+    if (!input.data.name || !input.data.name.trim()) errors.name = 'Please enter the title or alias name.';
+    else if (input.data.name.length > 200) errors.name = 'Name must not exceed 200 characters.';
     if (!input.data.url || !isValidHttpUrl(input.data.url)) {
       errors.url = 'A valid http:// or https:// proof/source link is required.';
     }
   } else if (input.type === 'wrong_name') {
-    if (!input.data.targetAlias || !input.data.targetAlias.trim()) {
-      errors.targetAlias = 'Please select which name is incorrect.';
-    }
-    if (!input.data.reason || !input.data.reason.trim()) {
-      errors.reason = 'Please select a reason.';
-    }
+    if (!input.data.targetAlias || !input.data.targetAlias.trim()) errors.targetAlias = 'Please select which name is incorrect.';
+    if (!input.data.reason || !input.data.reason.trim()) errors.reason = 'Please select a reason.';
   } else if (input.type === 'same_drama' || input.type === 'not_same_drama') {
     if (!input.data.otherSeriesTitle || !input.data.otherSeriesTitle.trim()) {
       errors.otherSeriesTitle = 'Please select or search the other drama title.';
     }
   } else if (input.type === 'wrong_details') {
-    if (!input.data.field || !input.data.field.trim()) {
-      errors.field = 'Please select which detail is incorrect.';
-    }
-    if (!input.data.proposedValue || !input.data.proposedValue.trim()) {
-      errors.proposedValue = 'Please enter the corrected value.';
-    } else if (input.data.proposedValue.length > 1000) {
-      errors.proposedValue = 'Correction value must not exceed 1000 characters.';
-    }
+    if (!input.data.field || !input.data.field.trim()) errors.field = 'Please select which detail is incorrect.';
+    if (!input.data.proposedValue || !input.data.proposedValue.trim()) errors.proposedValue = 'Please enter the corrected value.';
+    else if (input.data.proposedValue.length > 1000) errors.proposedValue = 'Correction value must not exceed 1000 characters.';
   } else if (input.type === 'broken_link') {
-    if (!input.data.releasePlatform || !input.data.releasePlatform.trim()) {
-      errors.releasePlatform = 'Please select the affected platform.';
-    }
+    if (!input.data.releasePlatform || !input.data.releasePlatform.trim()) errors.releasePlatform = 'Please select the affected platform.';
     if (input.data.replacementUrl && !isValidHttpUrl(input.data.replacementUrl)) {
       errors.replacementUrl = 'Replacement link must be a valid http:// or https:// URL.';
     }
   }
 
-  if (input.data.note && input.data.note.length > 1000) {
-    errors.note = 'Note must not exceed 1000 characters.';
-  }
+  if (input.data.note && input.data.note.length > 1000) errors.note = 'Note must not exceed 1000 characters.';
+  if (Object.keys(errors).length > 0) return { success: false, errors };
 
-  if (Object.keys(errors).length > 0) {
-    return {
-      success: false,
-      errors,
-    };
-  }
+  const reportData = trimmedReportData(input.data);
 
-  try {
+  if (isSupabaseConfigured) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      logDataError('submitReport: getUser', authError);
+      return { success: false, errors: { general: 'Something went wrong. Try again.' } };
+    }
+    if (!authData.user) return { success: false, errors: { general: 'Sign in to continue.' } };
 
-    // 2. Per-user daily limit enforcement: 10 reports per day for readers
-    if (user) {
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { count } = await supabase
-        .from('reports')
-        .select('*', { count: 'exact', head: true })
-        .eq('submitted_by', user.id)
-        .gte('created_at', oneDayAgo);
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count, error: countError } = await supabase
+      .from('reports')
+      .select('*', { count: 'exact', head: true })
+      .eq('submitted_by', authData.user.id)
+      .gte('created_at', oneDayAgo);
 
-      if (typeof count === 'number' && count >= 10) {
-        return {
-          success: false,
-          errors: {
-            general: 'Daily report limit reached (maximum 10 reports per day). Please try again tomorrow.',
-          },
-        };
-      }
+    if (countError) {
+      logDataError('submitReport: daily report count', countError);
+      return { success: false, errors: { general: 'Something went wrong. Try again.' } };
+    }
+    if (typeof count === 'number' && count >= 10) {
+      return {
+        success: false,
+        errors: { general: 'Daily report limit reached (maximum 10 reports per day). Please try again tomorrow.' },
+      };
     }
 
     const { data, error } = await supabase
@@ -219,38 +223,35 @@ export async function submitReport(input: SubmitReportInput): Promise<SubmitRepo
         series_id: input.seriesId,
         type: input.type,
         status: 'open',
-        submitted_by: user?.id || null,
-        data: input.data,
+        submitted_by: authData.user.id,
+        data: reportData,
       })
       .select('id')
       .single();
 
-    if (data && !error) {
-      return {
-        success: true,
-        reportId: data.id,
-        message: 'Report sent',
-      };
+    if (error || !data) {
+      if (error) logDataError('submitReport: insert report', error);
+      else logDataError('submitReport: insert report', new Error('Report insert returned no data'));
+      return { success: false, errors: { general: 'Something went wrong. Try again.' } };
     }
-  } catch {
-    // Fallback
+
+    return { success: true, reportId: data.id, message: 'Report sent' };
   }
 
-  // In-memory fallback check
+  if (!allowMockData) {
+    logDataError('submitReport', new Error('Mock data is not allowed'));
+    return { success: false, errors: { general: 'Something went wrong. Try again.' } };
+  }
+
   const todayReports = mockReports.filter(
     (r) => r.submittedAt === new Date().toISOString().split('T')[0]
   );
   if (todayReports.length >= 10) {
-    return {
-      success: false,
-      errors: {
-        general: 'Daily report limit reached (maximum 10 reports per day). Please try again tomorrow.',
-      },
-    };
+    return { success: false, errors: { general: 'Daily report limit reached (maximum 10 reports per day). Please try again tomorrow.') } };
   }
 
   const newId = `rep_${Date.now()}`;
-  const newReport: UserReport = {
+  mockReports.unshift({
     id: newId,
     seriesId: input.seriesId,
     seriesTitle: input.seriesTitle,
@@ -259,17 +260,12 @@ export async function submitReport(input: SubmitReportInput): Promise<SubmitRepo
     status: 'open',
     submittedBy: 'usr_reader_01',
     submittedAt: new Date().toISOString().split('T')[0],
-    data: input.data,
-  };
+    data: reportData,
+  });
 
-  mockReports.unshift(newReport);
-
-  return {
-    success: true,
-    reportId: newId,
-    message: 'Report sent',
-  };
+  return { success: true, reportId: newId, message: 'Report sent' };
 }
+
 
 /**
  * Updates list entry with rate limiting (60 list changes per hour)
@@ -280,87 +276,128 @@ export async function updateListEntryAction(params: {
   episodesWatched?: number;
   score?: number;
 }): Promise<{ success: boolean; message?: string; entry?: typeof mockUserListEntries[0] }> {
-  try {
+  if (isSupabaseConfigured) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      logDataError('updateListEntryAction: getUser', authError);
+      return { success: false, message: 'Something went wrong. Try again.' };
+    }
+    if (!authData.user) return { success: false, message: 'Sign in to continue.' };
 
-    if (user) {
-      // 1. Rate limit: 60 list changes per hour
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const { count } = await supabase
-        .from('list_entries')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('updated_at', oneHourAgo);
+    const { data: existingRow, error: existingError } = await supabase
+      .from('list_entries')
+      .select('status, episodes_watched, score')
+      .eq('user_id', authData.user.id)
+      .eq('series_id', params.seriesId)
+      .maybeSingle();
 
-      if (typeof count === 'number' && count >= 60) {
-        return {
-          success: false,
-          message: 'Hourly list update limit reached (maximum 60 updates per hour).',
-        };
-      }
+    if (existingError) {
+      logDataError('updateListEntryAction: existing list entry', existingError);
+      return { success: false, message: 'Something went wrong. Try again.' };
+    }
+    if (!existingRow && !params.status) {
+      return { success: false, message: 'Add this title to your list first.' };
+    }
 
-      const payload: any = {
-        user_id: user.id,
-        series_id: params.seriesId,
-        updated_at: new Date().toISOString(),
-      };
-      if (params.status) payload.status = params.status;
-      if (typeof params.episodesWatched === 'number') {
-        payload.episodes_watched = Math.max(0, params.episodesWatched);
-      }
-      if (typeof params.score === 'number') {
-        payload.score = params.score;
-      }
+    const { data: seriesData, error: seriesError } = await supabase
+      .from('series')
+      .select('slug, short_id')
+      .eq('id', params.seriesId)
+      .single();
 
-      await supabase.from('list_entries').upsert(payload);
-      revalidatePath('/');
-      revalidatePath(`/title/${params.seriesId}`);
+    if (seriesError) {
+      logDataError('updateListEntryAction: series lookup', seriesError);
+      return { success: false, message: 'Something went wrong. Try again.' };
+    }
+    if (!seriesData?.slug || !seriesData?.short_id) {
+      logDataError('updateListEntryAction: series lookup', new Error('Series slug or short_id missing'));
+      return { success: false, message: 'Something went wrong. Try again.' };
+    }
 
-      return {
-        success: true,
-        entry: {
-          userId: user.id,
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count, error: countError } = await supabase
+      .from('list_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', authData.user.id)
+      .gte('updated_at', oneHourAgo);
+
+    if (countError) {
+      logDataError('updateListEntryAction: rate limit count', countError);
+      return { success: false, message: 'Something went wrong. Try again.' };
+    }
+    if (typeof count === 'number' && count >= 60) {
+      return { success: false, message: 'Hourly list update limit reached (maximum 60 updates per hour).' };
+    }
+
+    const payload: any = {
+      user_id: authData.user.id,
+      series_id: params.seriesId,
+      updated_at: new Date().toISOString(),
+    };
+    if (params.status) payload.status = params.status;
+    if (typeof params.episodesWatched === 'number') payload.episodes_watched = Math.max(0, params.episodesWatched);
+    if (typeof params.score === 'number') payload.score = params.score;
+
+    const { error: upsertError } = await supabase.from('list_entries').upsert(payload);
+    if (upsertError) {
+      logDataError('updateListEntryAction: upsert', upsertError);
+      return { success: false, message: 'Something went wrong. Try again.' };
+    }
+
+    revalidateSeriesContext({ slug: seriesData.slug, shortId: seriesData.short_id });
+    const entry = existingRow
+      ? {
+          userId: authData.user.id,
           seriesId: params.seriesId,
-          status: params.status || 'watching',
-          episodesWatched: params.episodesWatched || 0,
+          status: params.status || existingRow.status,
+          episodesWatched: typeof params.episodesWatched === 'number'
+            ? Math.max(0, params.episodesWatched)
+            : existingRow.episodes_watched || 0,
+          score: typeof params.score === 'number' ? params.score : existingRow.score,
+          updatedAt: new Date().toISOString().split('T')[0],
+        }
+      : {
+          userId: authData.user.id,
+          seriesId: params.seriesId,
+          status: params.status!,
+          episodesWatched: typeof params.episodesWatched === 'number' ? Math.max(0, params.episodesWatched) : 0,
           score: params.score,
           updatedAt: new Date().toISOString().split('T')[0],
-        },
-      };
-    }
-  } catch {
-    // Fallback
+        };
+
+    return { success: true, entry };
+  }
+
+  if (!allowMockData) {
+    logDataError('updateListEntryAction', new Error('Mock data is not allowed'));
+    return { success: false, message: 'Something went wrong. Try again.' };
   }
 
   const mockUserId = 'usr_reader_01';
-  let existing = mockUserListEntries.find(
-    (e) => e.userId === mockUserId && e.seriesId === params.seriesId
-  );
+  const existing = mockUserListEntries.find((e) => e.userId === mockUserId && e.seriesId === params.seriesId);
+  if (!existing && !params.status) return { success: false, message: 'Add this title to your list first.' };
 
   if (existing) {
     if (params.status) existing.status = params.status;
-    if (typeof params.episodesWatched === 'number') {
-      existing.episodesWatched = Math.max(0, params.episodesWatched);
-    }
-    if (typeof params.score === 'number') {
-      existing.score = params.score;
-    }
+    if (typeof params.episodesWatched === 'number') existing.episodesWatched = Math.max(0, params.episodesWatched);
+    if (typeof params.score === 'number') existing.score = params.score;
     existing.updatedAt = new Date().toISOString().split('T')[0];
     return { success: true, entry: existing };
-  } else {
-    const newEntry = {
-      userId: mockUserId,
-      seriesId: params.seriesId,
-      status: params.status || 'watching',
-      episodesWatched: params.episodesWatched || 0,
-      score: params.score,
-      updatedAt: new Date().toISOString().split('T')[0],
-    };
-    mockUserListEntries.push(newEntry);
-    return { success: true, entry: newEntry };
   }
+
+  const newEntry = {
+    userId: mockUserId,
+    seriesId: params.seriesId,
+    status: params.status!,
+    episodesWatched: typeof params.episodesWatched === 'number' ? Math.max(0, params.episodesWatched) : 0,
+    score: params.score,
+    updatedAt: new Date().toISOString().split('T')[0],
+  };
+  mockUserListEntries.push(newEntry);
+  return { success: true, entry: newEntry };
 }
+
 
 export async function updateUserPreferencesAction(
   prefs: Partial<UserPreferences>
