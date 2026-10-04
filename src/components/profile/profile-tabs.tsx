@@ -142,11 +142,11 @@ export function ProfileTabs({ profileData, isOwner: isOwnerProp }: ProfileTabsPr
                 >
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] uppercase tracking-wider font-semibold text-[var(--muted)] bg-[var(--surface-subtle)] px-1.5 py-0.5 rounded-[4px] border border-[var(--line)]">
+                      <span className="text-[11px] font-semibold text-[var(--muted)] bg-[var(--surface-subtle)] px-1.5 py-0.5 rounded-[4px] border border-[var(--line)]">
                         {c.type}
                       </span>
                       <Link
-                        href={`/title/${c.seriesId}-drama`}
+                        href={titlePath({ slug: c.seriesSlug || 'title', shortId: c.seriesShortId || String(c.seriesId) })}
                         className="font-medium text-[14px] text-[var(--ink)] hover:text-[var(--crimson)] hover:underline"
                       >
                         {c.seriesTitle}
@@ -217,7 +217,7 @@ export function ProfileTabs({ profileData, isOwner: isOwnerProp }: ProfileTabsPr
                   <div className="text-[13px]">
                     <span className="text-[var(--muted)] mr-1">Target:</span>
                     <Link
-                      href={`/title/${rep.seriesId}-drama`}
+                      href={titlePath({ slug: rep.data?.targetAlias ? 'title' : 'title', shortId: String(rep.seriesId) })}
                       className="font-medium text-[var(--ink)] hover:text-[var(--crimson)] hover:underline"
                     >
                       {rep.seriesTitle}

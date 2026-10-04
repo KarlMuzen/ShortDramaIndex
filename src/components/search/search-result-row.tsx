@@ -60,7 +60,7 @@ export function SearchResultRow({ item }: SearchResultRowProps) {
                 <span>{matchedAlias.alias.text}</span>
               )}
             </span>
-            <span className="text-[11px] text-[var(--muted)] uppercase tracking-wider">
+            <span className="text-[11px] text-[var(--muted)]">
               ({matchedAlias.languageName})
             </span>
           </div>

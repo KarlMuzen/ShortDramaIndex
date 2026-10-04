@@ -991,7 +991,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 109,
-    shortId: 's109j',
+    shortId: 's109i',
     slug: 'the-billionaire-undercover-bodyguard',
     title: 'The Billionaire Undercover Bodyguard',
     romanizedTitle: 'Shen Hao Bao Biao',
@@ -1083,7 +1083,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 110,
-    shortId: 's110k',
+    shortId: 's110j',
     slug: 'twin-heirs-swap-destiny',
     title: 'Twin Heirs Swap Destiny',
     romanizedTitle: 'Shuang Bao Tai Huan Shen Ji',
@@ -1156,7 +1156,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 111,
-    shortId: 's111m',
+    shortId: 's111k',
     slug: 'echoes-of-a-second-chance',
     title: 'Echoes of a Second Chance',
     romanizedTitle: 'Zai Ci Yu Ni Xiang Yu',
@@ -1229,7 +1229,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 112,
-    shortId: 's112n',
+    shortId: 's112l',
     slug: 'the-secret-matriarch-of-riverdale',
     title: 'The Secret Matriarch of Riverdale',
     romanizedTitle: 'Yin Shi Hao Men Zhang Men Ren',

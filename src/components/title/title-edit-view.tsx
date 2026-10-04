@@ -188,7 +188,7 @@ function TitleEditContent({
 
         <div className="flex items-center gap-2">
           <Link
-            href={`/title/${initialSeries.id}-${initialSeries.slug}/merge`}
+            href={`${titlePath(initialSeries)}/merge`}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-[var(--ink)] bg-[var(--surface)] border border-[var(--line)] rounded-[8px] hover:bg-[var(--surface-hover)] transition-colors"
           >
             <GitMerge className="w-3.5 h-3.5 text-[var(--muted)]" />
@@ -196,7 +196,7 @@ function TitleEditContent({
           </Link>
 
           <Link
-            href={`/title/${initialSeries.id}-${initialSeries.slug}/history`}
+            href={`${titlePath(initialSeries)}/history`}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-[var(--ink)] bg-[var(--surface)] border border-[var(--line)] rounded-[8px] hover:bg-[var(--surface-hover)] transition-colors"
           >
             <History className="w-3.5 h-3.5 text-[var(--muted)]" />
@@ -308,7 +308,7 @@ function TitleEditContent({
                     <td className="py-2.5 pr-3 font-medium text-[var(--ink)]">
                       <span lang={alias.language}>{alias.text}</span>
                     </td>
-                    <td className="py-2.5 px-2 uppercase text-[var(--muted)] font-mono text-[12px]">
+                    <td className="py-2.5 px-2 text-[var(--muted)] font-mono text-[12px]">
                       {alias.language}
                     </td>
                     <td className="py-2.5 px-2 text-[12px] text-[var(--muted)] hidden sm:table-cell">

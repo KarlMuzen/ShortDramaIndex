@@ -26,10 +26,14 @@ export const dynamicParams = true;
 export const revalidate = 3600;
 
 export async function generateStaticParams() {
-  const seriesList = await getAllSeries();
-  return seriesList.map((series) => ({
-    slug: `${series.id}-${series.slug}`,
-  }));
+  try {
+    const seriesList = await getAllSeries();
+    return seriesList.map((series) => ({
+      slug: `${series.slug}-${series.shortId}`,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 interface TitlePageProps {
@@ -114,7 +118,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
   }
 
   // Canonical slug redirect if slug is outdated
-  const expectedSlug = `${series.id}-${series.slug}`;
+  const expectedSlug = `${series.slug}-${series.shortId}`;
   if (slug !== expectedSlug) {
     permanentRedirect(titlePath(series));
   }

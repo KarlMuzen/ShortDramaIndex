@@ -22,7 +22,7 @@ export default function NotFound() {
 
       {/* Action / Next step */}
       <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[12px] space-y-3 text-left">
-        <span className="text-[12px] font-semibold text-[var(--muted)] uppercase tracking-wider block">
+        <span className="text-[12px] font-semibold text-[var(--muted)] block">
           Suggested next steps
         </span>
 

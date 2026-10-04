@@ -30,6 +30,7 @@ import {
   MOCK_NOW,
 } from './mock';
 import { supabasePublic, isSupabaseConfigured } from './supabase-public';
+import { parseTitleParam, parsePersonParam } from '@/src/lib/urls';
 import { getLanguageName } from '@/src/lib/languages';
 
 export { getLanguageName };
@@ -98,7 +99,6 @@ function isValidUrl(str: string): boolean {
 export interface RecentAliasEntry {
   alias: Alias;
   seriesId: number;
-  seriesShortId: string;
   seriesSlug: string;
   seriesTitle: string;
   addedAt: string;
@@ -235,14 +235,14 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
     try {
       const { data: popularData, error: popError } = await supabasePublic
         .from('series')
-        .select('id, short_id, slug, title, year, episode_count, visibility, list_count, rating_count')
+        .select('id, slug, title, year, episode_count, visibility, list_count, rating_count')
         .eq('visibility', 'public')
         .order('list_count', { ascending: false })
         .limit(6);
 
       const { data: aliasData, error: aliasError } = await supabasePublic
         .from('aliases')
-        .select('text, language, source_url, source_label, added_at, series:series_id(id, short_id, slug, title, visibility)')
+        .select('text, language, source_url, source_label, added_at, series:series_id(id, slug, title, visibility)')
         .order('added_at', { ascending: false })
         .limit(7);
 
@@ -297,7 +297,6 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
             addedAt: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
           },
           seriesId: Number(a.series.id),
-          seriesShortId: a.series.short_id || String(a.series.id),
           seriesSlug: a.series.slug,
           seriesTitle: a.series.title,
           addedAt: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
@@ -343,7 +342,6 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
       allAliases.push({
         alias,
         seriesId: series.id,
-        seriesShortId: series.shortId,
         seriesSlug: series.slug,
         seriesTitle: series.title,
         addedAt: alias.addedAt,
@@ -536,7 +534,6 @@ export async function searchSeries(params: {
       const items: SearchResultItem[] = data.map((row: any) => {
         const series: Series = {
           id: Number(row.id),
-          shortId: row.short_id || String(row.id),
           slug: row.slug,
           title: row.title,
           romanizedTitle: row.romanized_title || undefined,
@@ -776,10 +773,11 @@ export async function searchSeries(params: {
 }
 
 /**
- * Gets a single series by numeric ID or shortId (5-char base36)
+ * Gets a single series by numeric ID or 5-char shortId
  */
 export async function getSeriesById(idOrShortId: number | string): Promise<Series | null> {
   const isNumeric = typeof idOrShortId === 'number' || /^\d+$/.test(String(idOrShortId));
+  const shortId = typeof idOrShortId === 'string' ? parseTitleParam(idOrShortId) || idOrShortId : null;
 
   if (isSupabaseConfigured) {
     try {
@@ -795,10 +793,10 @@ export async function getSeriesById(idOrShortId: number | string): Promise<Serie
           series_people(role_type, character_name, people(id, short_id, slug, name, native_name))
         `);
 
-      if (isNumeric) {
-        query = query.eq('id', Number(idOrShortId));
+      if (shortId && !isNumeric) {
+        query = query.eq('short_id', shortId);
       } else {
-        query = query.eq('short_id', String(idOrShortId).toLowerCase());
+        query = query.eq('id', Number(idOrShortId));
       }
 
       const { data, error } = await query.single();
@@ -816,14 +814,11 @@ export async function getSeriesById(idOrShortId: number | string): Promise<Serie
   const series = mockSeriesList.find(
     (s) =>
       s.shortId.toLowerCase() === lookupStr ||
+      (shortId && s.shortId.toLowerCase() === shortId.toLowerCase()) ||
       (isNumeric && s.id === Number(idOrShortId))
   );
   if (!series || series.visibility === 'removed') return null;
   return series;
-}
-
-export async function getSeriesByShortId(shortId: string): Promise<Series | null> {
-  return getSeriesById(shortId);
 }
 
 /**
@@ -1049,9 +1044,9 @@ export async function getPerson(
       const { data, error } = await supabasePublic
         .from('people')
         .select(`
-          id, short_id, slug, name, native_name,
+          id, slug, name, native_name,
           series_people(
-            series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)
+            series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)
           )
         `)
         .eq('id', id)
@@ -1061,7 +1056,6 @@ export async function getPerson(
 
       const person: Person = {
         id: Number(data.id),
-        shortId: data.short_id || String(data.id),
         slug: data.slug,
         name: data.name,
         nativeName: data.native_name,
@@ -1104,7 +1098,7 @@ export async function getAllSeries(): Promise<Series[]> {
     try {
       const { data, error } = await supabasePublic
         .from('series')
-        .select('id, short_id, slug, title, updated_at, visibility, synopsis')
+        .select('id, slug, title, updated_at, visibility, synopsis')
         .eq('visibility', 'public');
 
       if (error || !data) return [];
@@ -1143,7 +1137,7 @@ export async function getAllPeople(): Promise<Person[]> {
     try {
       const { data, error } = await supabasePublic
         .from('people')
-        .select('id, short_id, slug, name, native_name');
+        .select('id, slug, name, native_name');
 
       if (error || !data) return [];
 
@@ -1756,7 +1750,7 @@ export interface PersonCredit {
 }
 
 /**
- * Gets person and their drama credits by shortId, numeric ID, or slug
+ * Gets person and their drama credits
  */
 export async function getPersonByIdOrSlug(
   idOrSlug: string
@@ -1764,30 +1758,22 @@ export async function getPersonByIdOrSlug(
   person: Person;
   credits: PersonCredit[];
 } | null> {
-  const clean = idOrSlug.toLowerCase().trim();
-  const isNumeric = /^\d+$/.test(clean);
-  const isShortId = /^[a-z0-9]{5}$/.test(clean);
-  const personId = isNumeric ? parseInt(clean, 10) : null;
+  const shortId = parsePersonParam(idOrSlug);
+  if (!shortId) return null;
 
   if (isSupabaseConfigured) {
     try {
-      let query = supabasePublic.from('people').select(`
-        id, short_id, slug, name, native_name,
-        series_people(
-          character_name, role_type,
-          series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, rating_score, rating_count, list_count)
-        )
-      `);
-
-      if (isShortId) {
-        query = query.eq('short_id', clean);
-      } else if (personId !== null) {
-        query = query.eq('id', personId);
-      } else {
-        query = query.eq('slug', clean);
-      }
-
-      const { data, error } = await query.single();
+      const { data, error } = await supabasePublic
+        .from('people')
+        .select(`
+          id, short_id, slug, name, native_name,
+          series_people(
+            character_name, role_type,
+            series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, rating_score, rating_count, list_count)
+          )
+        `)
+        .eq('short_id', shortId)
+        .single();
 
       if (error || !data) {
         return null;
@@ -1817,11 +1803,7 @@ export async function getPersonByIdOrSlug(
   }
 
   const person = mockPeople.find(
-    (p) =>
-      p.shortId.toLowerCase() === clean ||
-      (personId !== null && p.id === personId) ||
-      p.slug.toLowerCase() === clean ||
-      p.name.toLowerCase().replace(/\s+/g, '-') === clean
+    (p) => p.shortId.toLowerCase() === shortId.toLowerCase()
   );
 
   if (!person) return null;

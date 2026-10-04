@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { titlePath } from '@/src/lib/urls';
 import { createClient } from './supabase-server';
 import {
   mockReports,
@@ -31,12 +32,16 @@ function isValidHttpUrl(str?: string): boolean {
   }
 }
 
-function revalidateSeriesContext(seriesId: number, slug?: string, tags?: Tag[], releases?: Release[]) {
+function revalidateSeriesContext(
+  series?: { slug?: string; shortId?: string } | null,
+  tags?: Tag[],
+  releases?: Release[]
+) {
   revalidatePath('/');
-  revalidatePath(`/title/${seriesId}`);
-  if (slug) {
-    revalidatePath(`/title/${seriesId}-${slug}`);
-    revalidatePath(`/title/${seriesId}-${slug}/history`);
+  if (series?.slug && series?.shortId) {
+    const path = titlePath({ slug: series.slug, shortId: series.shortId });
+    revalidatePath(path);
+    revalidatePath(`${path}/history`);
   }
   if (tags) {
     for (const t of tags) {
@@ -491,7 +496,7 @@ export async function saveSeriesEditsAction(
         };
       }
 
-      revalidateSeriesContext(input.seriesId, undefined, input.tags, input.releases);
+      revalidateSeriesContext(undefined, input.tags, input.releases);
       return { success: true, revisionId: String(revisionId) };
     }
   } catch {
@@ -535,7 +540,7 @@ export async function saveSeriesEditsAction(
   };
 
   mockRevisions.unshift(newRev);
-  revalidateSeriesContext(series.id, series.slug, series.tags, series.releases);
+  revalidateSeriesContext(series, series.tags, series.releases);
 
   return { success: true, revisionId };
 }
@@ -581,18 +586,20 @@ export async function mergeSeriesAction(params: {
         submitted_by: user.id,
       });
 
-      revalidateSeriesContext(params.sourceId);
-      revalidateSeriesContext(params.targetId);
-
       const { data: targetSeries } = await supabase
         .from('series')
-        .select('slug')
+        .select('slug, short_id')
         .eq('id', params.targetId)
         .single();
 
+      revalidateSeriesContext(targetSeries);
+
       return {
         success: true,
-        redirectPath: `/title/${params.targetId}-${targetSeries?.slug || 'merged'}`,
+        redirectPath: titlePath({
+          slug: targetSeries?.slug || 'merged',
+          shortId: targetSeries?.short_id || String(params.targetId),
+        }),
       };
     }
   } catch {
@@ -623,12 +630,12 @@ export async function mergeSeriesAction(params: {
     reason: params.reason || 'Merged duplicate entry',
   });
 
-  revalidateSeriesContext(source.id, source.slug, source.tags, source.releases);
-  revalidateSeriesContext(target.id, target.slug, target.tags, target.releases);
+  revalidateSeriesContext(source, source.tags, source.releases);
+  revalidateSeriesContext(target, target.tags, target.releases);
 
   return {
     success: true,
-    redirectPath: `/title/${target.id}-${target.slug}`,
+    redirectPath: titlePath(target),
   };
 }
 
@@ -686,7 +693,7 @@ export async function resolveModerationReportAction(params: {
         .eq('id', params.reportId);
 
       if (report?.series_id) {
-        revalidateSeriesContext(report.series_id);
+        revalidatePath('/');
       }
       return { success: true };
     }
@@ -711,7 +718,7 @@ export async function resolveModerationReportAction(params: {
           addedBy: report.submittedBy,
           addedAt: new Date().toISOString().split('T')[0],
         });
-        revalidateSeriesContext(targetSeries.id, targetSeries.slug, targetSeries.tags, targetSeries.releases);
+        revalidateSeriesContext(targetSeries, targetSeries.tags, targetSeries.releases);
       }
     }
   } else if (params.decision === 'decline') {

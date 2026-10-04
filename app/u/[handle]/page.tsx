@@ -87,7 +87,7 @@ export default async function UserProfilePage({ params }: UserPageProps) {
         {/* Counts Bar */}
         <div className="grid grid-cols-3 gap-3 pt-3 border-t border-[var(--line)]">
           <div className="space-y-0.5">
-            <span className="text-[12px] text-[var(--muted)] uppercase tracking-wider font-medium block">
+            <span className="text-[12px] text-[var(--muted)] font-medium block">
               Titles listed
             </span>
             <span className="text-[20px] sm:text-[24px] font-semibold text-[var(--ink)] tabular-nums">
@@ -96,7 +96,7 @@ export default async function UserProfilePage({ params }: UserPageProps) {
           </div>
 
           <div className="space-y-0.5 border-l border-[var(--line)] pl-3 sm:pl-4">
-            <span className="text-[12px] text-[var(--muted)] uppercase tracking-wider font-medium block">
+            <span className="text-[12px] text-[var(--muted)] font-medium block">
               Names added
             </span>
             <span className="text-[20px] sm:text-[24px] font-semibold text-[var(--ink)] tabular-nums">
@@ -105,7 +105,7 @@ export default async function UserProfilePage({ params }: UserPageProps) {
           </div>
 
           <div className="space-y-0.5 border-l border-[var(--line)] pl-3 sm:pl-4">
-            <span className="text-[12px] text-[var(--muted)] uppercase tracking-wider font-medium block">
+            <span className="text-[12px] text-[var(--muted)] font-medium block">
               Reports accepted
             </span>
             <span className="text-[20px] sm:text-[24px] font-semibold text-[var(--status-verified)] tabular-nums">

@@ -122,7 +122,7 @@ export function UserListView({ initialEntries, isOwner = true }: UserListViewPro
           <div className="hidden md:block w-full overflow-x-auto">
             <table className="w-full text-left border-collapse text-[13px]">
               <thead>
-                <tr className="border-b border-[var(--line)] text-[12px] uppercase tracking-wider font-semibold text-[var(--muted)]">
+                <tr className="border-b border-[var(--line)] text-[12px] font-semibold text-[var(--muted)]">
                   <th scope="col" className="py-2.5 px-2 w-14">
                     Poster
                   </th>

@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { UserReport, Series } from '@/src/data/types';
+import { UserReport, ReportType, Series } from '@/src/data/types';
 import { resolveModerationReportAction } from '@/src/data/actions';
-import { RoleGate } from '@/src/components/auth/role-gate';
 import { titlePath } from '@/src/lib/urls';
+import { RoleGate } from '@/src/components/auth/role-gate';
 import { useToast } from '@/src/components/ui/toast';
 import { Button } from '@/src/components/ui/button';
 import { Dialog } from '@/src/components/ui/dialog';
@@ -26,15 +26,13 @@ import {
   Keyboard,
 } from 'lucide-react';
 
-interface ModQueueViewProps {
-  initialReports?: UserReport[];
-  seriesList?: Series[];
-}
-
 export function ModQueueView({
   initialReports = [],
   seriesList = [],
-}: ModQueueViewProps) {
+}: {
+  initialReports?: UserReport[];
+  seriesList?: Series[];
+}) {
   return (
     <RoleGate requiredRole="moderator">
       <ModQueueContent initialReports={initialReports} seriesList={seriesList} />
@@ -50,7 +48,6 @@ function ModQueueContent({
   seriesList: Series[];
 }) {
   const { showToast } = useToast();
-
   const [reports, setReports] = useState<UserReport[]>(initialReports);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -323,7 +320,7 @@ function ModQueueContent({
                 </div>
 
                 <Link
-                  href={`/title/${selectedReport.seriesId}-drama`}
+                  href={currentSeries ? titlePath(currentSeries) : `/title/${selectedReport.seriesId}`}
                   target="_blank"
                   className="text-[13px] text-[var(--crimson)] hover:underline inline-flex items-center gap-1 font-medium"
                 >

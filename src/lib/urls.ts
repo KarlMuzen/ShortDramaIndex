@@ -32,13 +32,12 @@ export function slugify(text: string, fallback?: string): string {
 /**
  * Returns canonical title path: /title/<slug>-<shortId>
  */
-export function titlePath(series: { slug: string; shortId?: string; id?: number | string }): string {
-  const shortId = series.shortId || (series.id !== undefined ? String(series.id) : '');
-  return `/title/${series.slug}-${shortId}`;
+export function titlePath(series: { slug: string; shortId: string }): string {
+  return `/title/${series.slug}-${series.shortId}`;
 }
 
 /**
- * Parses 5-character base36 short ID from title route parameter (e.g., "hidden-love-a1b2c" -> "a1b2c")
+ * Parses 5-character base36 short ID from title route parameter (e.g., "hidden-love-s101a" -> "s101a")
  */
 export function parseTitleParam(param: string): string | null {
   if (!param) return null;
@@ -52,13 +51,12 @@ export function parseTitleParam(param: string): string | null {
 /**
  * Returns canonical person path: /person/<slug>-<shortId>
  */
-export function personPath(person: { slug: string; shortId?: string; id?: number | string }): string {
-  const shortId = person.shortId || (person.id !== undefined ? String(person.id) : '');
-  return `/person/${person.slug}-${shortId}`;
+export function personPath(person: { slug: string; shortId: string }): string {
+  return `/person/${person.slug}-${person.shortId}`;
 }
 
 /**
- * Parses 5-character base36 short ID from person route parameter
+ * Parses 5-character base36 short ID from person route parameter (e.g., "lin-yuxin-p201a" -> "p201a")
  */
 export function parsePersonParam(param: string): string | null {
   if (!param) return null;
@@ -70,7 +68,7 @@ export function parsePersonParam(param: string): string | null {
 }
 
 /**
- * Returns canonical tag path: /tag/<slug>
+ * Returns canonical tag path
  */
 export function tagPath(tag: { slug: string } | string): string {
   const slug = typeof tag === 'string' ? tag : tag.slug;
@@ -78,7 +76,7 @@ export function tagPath(tag: { slug: string } | string): string {
 }
 
 /**
- * Returns canonical platform path: /platform/<slug>
+ * Returns canonical platform path
  */
 export function platformPath(platform: { slug: string } | string): string {
   const slug = typeof platform === 'string' ? platform : platform.slug;

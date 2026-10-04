@@ -13,10 +13,14 @@ export const dynamicParams = true;
 export const revalidate = 3600;
 
 export async function generateStaticParams() {
-  const people = await getAllPeople();
-  return people.map((person) => ({
-    slug: `${person.id}-${person.slug}`,
-  }));
+  try {
+    const people = await getAllPeople();
+    return people.map((person) => ({
+      slug: `${person.slug}-${person.shortId}`,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 interface PersonPageProps {
@@ -78,7 +82,7 @@ export default async function PersonPage({ params }: PersonPageProps) {
   const { person, credits } = personData;
 
   // Canonical slug enforcement (same logic as the title page)
-  const expectedSlug = `${person.id}-${person.slug}`;
+  const expectedSlug = `${person.slug}-${person.shortId}`;
   if (slug !== expectedSlug) {
     permanentRedirect(personPath(person));
   }

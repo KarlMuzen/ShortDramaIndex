@@ -6,6 +6,7 @@ import {
   getAllPlatforms,
   getAllPeople,
 } from '@/src/data/repository';
+import { titlePath, personPath } from '@/src/lib/urls';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.baseUrl;
@@ -48,7 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         (Boolean(s.synopsis) || s.releases.length > 0)
     )
     .map((s) => ({
-      url: `${baseUrl}/title/${s.id}-${s.slug}`,
+      url: `${baseUrl}${titlePath(s)}`,
       lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(),
     }));
 
@@ -64,7 +65,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // People pages (omit lastModified, changeFrequency, priority)
   const peopleRoutes: MetadataRoute.Sitemap = people.map((p) => ({
-    url: `${baseUrl}/person/${p.id}-${p.slug}`,
+    url: `${baseUrl}${personPath(p)}`,
   }));
 
   return [
