@@ -376,6 +376,7 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
       allAliases.push({
         alias,
         seriesId: series.id,
+        seriesShortId: series.shortId,
         seriesSlug: series.slug,
         seriesTitle: series.title,
         addedAt: alias.addedAt,
