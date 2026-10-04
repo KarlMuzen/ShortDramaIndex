@@ -17,10 +17,10 @@ export async function generateMetadata({
 }: TitleHistoryPageProps): Promise<Metadata> {
   const { slug } = await params;
   const id = parseTitleParam(slug);
-  if (!id) return { title: 'Revision History' };
+  if (!id) return { title: 'Revision History', robots: { index: false, follow: true } };
 
   const series = await getSeriesById(id);
-  if (!series) return { title: 'Revision History' };
+  if (!series) return { title: 'Revision History', robots: { index: false, follow: true } };
 
   return {
     title: `Revision History: ${series.title}`,

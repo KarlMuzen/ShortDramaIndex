@@ -246,16 +246,16 @@ export const mockPlatforms: Platform[] = [
 ];
 
 export const mockTags: Tag[] = [
-  { slug: 'ceo-romance', name: 'CEO Romance', count: 8 },
-  { slug: 'hidden-identity', name: 'Hidden Identity', count: 7 },
-  { slug: 'contract-marriage', name: 'Contract Marriage', count: 6 },
+  { slug: 'ceo-romance', name: 'CEO romance', count: 8 },
+  { slug: 'hidden-identity', name: 'Hidden identity', count: 7 },
+  { slug: 'contract-marriage', name: 'Contract marriage', count: 6 },
   { slug: 'revenge', name: 'Revenge', count: 5 },
-  { slug: 'second-chance', name: 'Second Chance', count: 4 },
-  { slug: 'urban-fantasy', name: 'Urban Fantasy', count: 3 },
-  { slug: 'family-drama', name: 'Family Drama', count: 5 },
-  { slug: 'time-loop', name: 'Time Loop', count: 2 },
+  { slug: 'second-chance', name: 'Second chance', count: 4 },
+  { slug: 'urban-fantasy', name: 'Urban fantasy', count: 3 },
+  { slug: 'family-drama', name: 'Family drama', count: 5 },
+  { slug: 'time-loop', name: 'Time loop', count: 2 },
   { slug: 'undercover', name: 'Undercover', count: 3 },
-  { slug: 'medical-miracle', name: 'Medical Miracle', count: 4 },
+  { slug: 'medical-miracle', name: 'Medical miracle', count: 4 },
 ];
 
 export const mockPeople: Person[] = [
@@ -288,9 +288,9 @@ export const mockSeriesList: Series[] = [
     rank: 1,
     popularity: 9800,
     tags: [
-      { slug: 'contract-marriage', name: 'Contract Marriage' },
-      { slug: 'ceo-romance', name: 'CEO Romance' },
-      { slug: 'hidden-identity', name: 'Hidden Identity' },
+      { slug: 'contract-marriage', name: 'Contract marriage' },
+      { slug: 'ceo-romance', name: 'CEO romance' },
+      { slug: 'hidden-identity', name: 'Hidden identity' },
     ],
     aliases: [
       {
@@ -415,8 +415,8 @@ export const mockSeriesList: Series[] = [
     popularity: 11200,
     tags: [
       { slug: 'revenge', name: 'Revenge' },
-      { slug: 'second-chance', name: 'Second Chance' },
-      { slug: 'family-drama', name: 'Family Drama' },
+      { slug: 'second-chance', name: 'Second chance' },
+      { slug: 'family-drama', name: 'Family drama' },
     ],
     aliases: [
       {
@@ -514,9 +514,9 @@ export const mockSeriesList: Series[] = [
     rank: 6,
     popularity: 6400,
     tags: [
-      { slug: 'medical-miracle', name: 'Medical Miracle' },
-      { slug: 'hidden-identity', name: 'Hidden Identity' },
-      { slug: 'urban-fantasy', name: 'Urban Fantasy' },
+      { slug: 'medical-miracle', name: 'Medical miracle' },
+      { slug: 'hidden-identity', name: 'Hidden identity' },
+      { slug: 'urban-fantasy', name: 'Urban fantasy' },
     ],
     aliases: [
       {
@@ -614,7 +614,7 @@ export const mockSeriesList: Series[] = [
     rank: 3,
     popularity: 8900,
     tags: [
-      { slug: 'ceo-romance', name: 'CEO Romance' },
+      { slug: 'ceo-romance', name: 'CEO romance' },
       { slug: 'undercover', name: 'Undercover' },
     ],
     aliases: [
@@ -704,8 +704,8 @@ export const mockSeriesList: Series[] = [
     rank: 5,
     popularity: 7600,
     tags: [
-      { slug: 'time-loop', name: 'Time Loop' },
-      { slug: 'urban-fantasy', name: 'Urban Fantasy' },
+      { slug: 'time-loop', name: 'Time loop' },
+      { slug: 'urban-fantasy', name: 'Urban fantasy' },
       { slug: 'revenge', name: 'Revenge' },
     ],
     aliases: [
@@ -782,8 +782,8 @@ export const mockSeriesList: Series[] = [
     popularity: 9100,
     tags: [
       { slug: 'revenge', name: 'Revenge' },
-      { slug: 'second-chance', name: 'Second Chance' },
-      { slug: 'ceo-romance', name: 'CEO Romance' },
+      { slug: 'second-chance', name: 'Second chance' },
+      { slug: 'ceo-romance', name: 'CEO romance' },
     ],
     aliases: [
       {
@@ -872,8 +872,8 @@ export const mockSeriesList: Series[] = [
     rank: 8,
     popularity: 4200,
     tags: [
-      { slug: 'hidden-identity', name: 'Hidden Identity' },
-      { slug: 'family-drama', name: 'Family Drama' },
+      { slug: 'hidden-identity', name: 'Hidden identity' },
+      { slug: 'family-drama', name: 'Family drama' },
       { slug: 'undercover', name: 'Undercover' },
     ],
     aliases: [
@@ -936,8 +936,8 @@ export const mockSeriesList: Series[] = [
     rank: 7,
     popularity: 5100,
     tags: [
-      { slug: 'time-loop', name: 'Time Loop' },
-      { slug: 'contract-marriage', name: 'Contract Marriage' },
+      { slug: 'time-loop', name: 'Time loop' },
+      { slug: 'contract-marriage', name: 'Contract marriage' },
     ],
     aliases: [
       {
@@ -999,9 +999,9 @@ export const mockSeriesList: Series[] = [
     rank: 9,
     popularity: 6800,
     tags: [
-      { slug: 'hidden-identity', name: 'Hidden Identity' },
+      { slug: 'hidden-identity', name: 'Hidden identity' },
       { slug: 'undercover', name: 'Undercover' },
-      { slug: 'ceo-romance', name: 'CEO Romance' },
+      { slug: 'ceo-romance', name: 'CEO romance' },
     ],
     aliases: [
       {
@@ -1090,8 +1090,8 @@ export const mockSeriesList: Series[] = [
     rank: 10,
     popularity: 5700,
     tags: [
-      { slug: 'hidden-identity', name: 'Hidden Identity' },
-      { slug: 'family-drama', name: 'Family Drama' },
+      { slug: 'hidden-identity', name: 'Hidden identity' },
+      { slug: 'family-drama', name: 'Family drama' },
     ],
     aliases: [
       {
@@ -1162,8 +1162,8 @@ export const mockSeriesList: Series[] = [
     rank: 11,
     popularity: 9300,
     tags: [
-      { slug: 'second-chance', name: 'Second Chance' },
-      { slug: 'time-loop', name: 'Time Loop' },
+      { slug: 'second-chance', name: 'Second chance' },
+      { slug: 'time-loop', name: 'Time loop' },
     ],
     aliases: [
       {
@@ -1234,8 +1234,8 @@ export const mockSeriesList: Series[] = [
     rank: 12,
     popularity: 3900,
     tags: [
-      { slug: 'family-drama', name: 'Family Drama' },
-      { slug: 'hidden-identity', name: 'Hidden Identity' },
+      { slug: 'family-drama', name: 'Family drama' },
+      { slug: 'hidden-identity', name: 'Hidden identity' },
     ],
     aliases: [
       {

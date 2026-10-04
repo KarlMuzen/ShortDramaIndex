@@ -39,7 +39,7 @@ export async function generateMetadata({
   }
 
   const titleString = `${data.person.name}: short drama credits`;
-  const fullDesc = `Credits and filmography for ${data.person.name} across indexed short vertical dramas. View verified acting and directing roles.`;
+  const fullDesc = `Credits and filmography for ${data.person.name} across indexed short dramas. View verified acting and directing roles.`;
   const description = fullDesc.length > 155 ? `${fullDesc.slice(0, 152)}...` : fullDesc;
   const canonicalUrl = `${siteConfig.baseUrl}${personPath(data.person)}`;
 
@@ -158,7 +158,7 @@ export default async function PersonPage({ params }: PersonPageProps) {
             Drama filmography & credits
           </h2>
           <p className="text-[13px] text-[var(--muted)] mt-0.5">
-            Verified appearances and creative roles across short vertical drama series
+            Verified appearances and creative roles across short drama series
           </p>
         </div>
 

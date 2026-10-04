@@ -1,24 +1,25 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { getHomePageFeed } from '@/src/data/repository';
+import { getLanguageName } from '@/src/lib/languages';
 import { siteConfig } from '@/src/config/site';
 import { titlePath, tagPath, platformPath } from '@/src/lib/urls';
 import { Poster } from '@/src/components/ui/poster';
 import { EmptyState } from '@/src/components/ui/empty-state';
 import { HeroSearch } from '@/src/components/home/hero-search';
-import { Tag as TagIcon, Tv, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: siteConfig.name,
-  description: `${siteConfig.name} is the reference database for short vertical dramas, cataloging all names, aliases, and official where-to-watch sources.`,
+  description: `${siteConfig.name} is the reference database for short dramas, cataloging all names, aliases, and official where-to-watch sources.`,
   alternates: {
     canonical: siteConfig.baseUrl,
   },
   openGraph: {
     title: siteConfig.name,
-    description: `${siteConfig.name} is the reference database for short vertical dramas, cataloging all names, aliases, and official where-to-watch sources.`,
+    description: `${siteConfig.name} is the reference database for short dramas, cataloging all names, aliases, and official where-to-watch sources.`,
     url: siteConfig.baseUrl,
     siteName: siteConfig.name,
     type: 'website',
@@ -26,9 +27,38 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: siteConfig.name,
-    description: `${siteConfig.name} is the reference database for short vertical dramas, cataloging all names, aliases, and official where-to-watch sources.`,
+    description: `${siteConfig.name} is the reference database for short dramas, cataloging all names, aliases, and official where-to-watch sources.`,
   },
 };
+
+function formatAbsoluteDate(dateStr: string): string {
+  try {
+    const parts = dateStr.split('T')[0].split('-');
+    if (parts.length < 3) return dateStr;
+    const year = parseInt(parts[0], 10);
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    const month = months[monthIndex];
+    if (!month || isNaN(day) || isNaN(year)) return dateStr;
+    return `${day} ${month} ${year}`;
+  } catch {
+    return dateStr;
+  }
+}
 
 export default async function HomePage() {
   const {
@@ -71,7 +101,7 @@ export default async function HomePage() {
   };
 
   return (
-    <div className="space-y-10 pb-8">
+    <div className="space-y-10 pb-8 text-left">
       {/* Schema.org Structured Data */}
       <script
         type="application/ld+json"
@@ -82,7 +112,7 @@ export default async function HomePage() {
       <HeroSearch />
 
       {/* Section 1: Popular this week */}
-      <section aria-labelledby="popular-heading" className="space-y-4 text-left">
+      <section aria-labelledby="popular-heading" className="space-y-4">
         <div className="flex items-baseline justify-between border-b border-[var(--line)] pb-2">
           <h2
             id="popular-heading"
@@ -142,7 +172,7 @@ export default async function HomePage() {
       </section>
 
       {/* Section 2: Recently added names */}
-      <section aria-labelledby="aliases-heading" className="space-y-4 text-left">
+      <section aria-labelledby="aliases-heading" className="space-y-4">
         <div className="flex items-baseline justify-between border-b border-[var(--line)] pb-2">
           <h2
             id="aliases-heading"
@@ -154,40 +184,43 @@ export default async function HomePage() {
         </div>
 
         {recentlyAddedAliases.length > 0 ? (
-          <div className="divide-y divide-[var(--line)] border-y border-[var(--line)] text-[13px]">
-            {recentlyAddedAliases.map((item, idx) => (
-              <div
-                key={idx}
-                className="py-2.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
-              >
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
-                  <span
-                    lang={item.alias.language}
-                    className="font-medium text-[var(--ink)]"
-                  >
-                    {item.alias.text}
-                  </span>
-                  <span className="text-[11px] font-mono uppercase text-[var(--muted)]">
-                    [{item.alias.language}]
-                  </span>
-                  <span className="text-[var(--muted)]">
-                    on{' '}
-                    <Link
-                      href={`/title/${item.seriesId}-${item.seriesSlug}`}
-                      className="text-[var(--ink)] font-medium hover:text-[var(--crimson)] hover:underline"
+          <div className="divide-y divide-[var(--line)] border-b border-[var(--line)] text-[13px]">
+            {recentlyAddedAliases.map((item, idx) => {
+              const langName = getLanguageName(item.alias.language);
+              return (
+                <div
+                  key={idx}
+                  className="py-2.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+                >
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+                    <span
+                      lang={item.alias.language}
+                      className="font-medium text-[var(--ink)]"
                     >
-                      {item.seriesTitle}
-                    </Link>
-                  </span>
-                </div>
+                      {item.alias.text}
+                    </span>
+                    <span className="text-[12px] text-[var(--muted)]">
+                      {langName} [{item.alias.language}]
+                    </span>
+                    <span className="text-[var(--muted)]">
+                      on{' '}
+                      <Link
+                        href={titlePath({ id: item.seriesId, slug: item.seriesSlug })}
+                        className="text-[var(--ink)] font-medium hover:text-[var(--crimson)] hover:underline"
+                      >
+                        {item.seriesTitle}
+                      </Link>
+                    </span>
+                  </div>
 
-                {item.relativeTime && (
-                  <span className="text-[12px] text-[var(--muted)] tabular-nums shrink-0">
-                    {item.relativeTime}
-                  </span>
-                )}
-              </div>
-            ))}
+                  {item.addedAt && (
+                    <span className="text-[12px] text-[var(--muted)] tabular-nums shrink-0">
+                      {formatAbsoluteDate(item.addedAt)}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <EmptyState
@@ -198,11 +231,10 @@ export default async function HomePage() {
       </section>
 
       {/* Section 3: Browse by Tag, Platform & Language */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Browse by Tag */}
         <section aria-labelledby="tags-heading" className="space-y-3">
-          <div className="flex items-center gap-2 border-b border-[var(--line)] pb-2">
-            <TagIcon className="w-4 h-4 text-[var(--muted)]" />
+          <div className="border-b border-[var(--line)] pb-2">
             <h2 id="tags-heading" className="text-[16px] font-semibold text-[var(--ink)]">
               Browse by trope or tag
             </h2>
@@ -216,11 +248,11 @@ export default async function HomePage() {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-[8px] text-[13px] text-[var(--ink)] hover:border-[var(--crimson)] hover:text-[var(--crimson)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crimson)]"
               >
                 <span>{tag.name}</span>
-                {tag.count ? (
+                {typeof tag.count === 'number' && (
                   <span className="text-[11px] text-[var(--muted)] tabular-nums">
                     {tag.count}
                   </span>
-                ) : null}
+                )}
               </Link>
             ))}
           </div>
@@ -228,8 +260,7 @@ export default async function HomePage() {
 
         {/* Browse by Platform */}
         <section aria-labelledby="platforms-heading" className="space-y-3">
-          <div className="flex items-center gap-2 border-b border-[var(--line)] pb-2">
-            <Tv className="w-4 h-4 text-[var(--muted)]" />
+          <div className="border-b border-[var(--line)] pb-2">
             <h2 id="platforms-heading" className="text-[16px] font-semibold text-[var(--ink)]">
               Browse by platform
             </h2>
@@ -250,7 +281,7 @@ export default async function HomePage() {
 
         {/* Browse by Language */}
         <section aria-labelledby="languages-heading" className="space-y-3">
-          <div className="flex items-center gap-2 border-b border-[var(--line)] pb-2">
+          <div className="border-b border-[var(--line)] pb-2">
             <h2 id="languages-heading" className="text-[16px] font-semibold text-[var(--ink)]">
               Browse by original language
             </h2>
@@ -269,7 +300,7 @@ export default async function HomePage() {
                     ({lang.nativeLabel})
                   </span>
                 )}
-                {typeof lang.count === 'number' && lang.count > 0 && (
+                {typeof lang.count === 'number' && (
                   <span className="text-[11px] text-[var(--muted)] tabular-nums">
                     {lang.count}
                   </span>

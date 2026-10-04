@@ -4,14 +4,13 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { getTagBySlug, getSeriesByTag, getAllTags } from '@/src/data/repository';
 import { siteConfig } from '@/src/config/site';
-import { titlePath, tagPath } from '@/src/lib/urls';
+import { titlePath } from '@/src/lib/urls';
 import { Breadcrumb } from '@/src/components/ui/breadcrumb';
 import { Poster } from '@/src/components/ui/poster';
 import { Pagination } from '@/src/components/ui/pagination';
+import { SortSelect } from '@/src/components/ui/sort-select';
 import { EmptyState } from '@/src/components/ui/empty-state';
-import { Hash, Star } from 'lucide-react';
-
-export const dynamic = 'force-dynamic';
+import { Star } from 'lucide-react';
 
 interface TagPageProps {
   params: Promise<{
@@ -134,7 +133,7 @@ export default async function TagPage({
   };
 
   return (
-    <div className="space-y-8 pb-16 text-left max-w-5xl mx-auto">
+    <div className="space-y-6 pb-16 text-left max-w-5xl mx-auto">
       {/* Structured Data */}
       <script
         type="application/ld+json"
@@ -149,72 +148,29 @@ export default async function TagPage({
         ]}
       />
 
-      {/* Header Section */}
-      <header className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[12px] space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-[8px] bg-[var(--surface-subtle)] text-[var(--crimson)] border border-[var(--line)] flex items-center justify-center font-semibold">
-            <Hash className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-[28px] font-semibold text-[var(--ink)] tracking-tight">
-              {tag.name} short dramas
-            </h1>
-          </div>
-        </div>
-
-        <p className="text-[14px] text-[var(--muted)] leading-relaxed max-w-3xl">
-          {description}
-        </p>
+      {/* Header Section (Uncarded, no icon tile) */}
+      <header className="space-y-2 border-b border-[var(--line)] pb-4 text-left">
+        <h1 className="text-[28px] font-semibold text-[var(--ink)] tracking-tight">
+          {tag.name} short dramas
+        </h1>
+        {description && (
+          <p className="text-[14px] text-[var(--muted)] leading-relaxed max-w-3xl">
+            {description}
+          </p>
+        )}
       </header>
 
-      {/* Results & Sort Bar */}
+      {/* Results & Sort Controls */}
       <section className="space-y-4">
-        <div className="flex items-baseline justify-between border-b border-[var(--line)] pb-2.5">
-          <div>
-            <h2 className="text-[18px] font-semibold text-[var(--ink)]">
-              All titles tagged #{tag.slug}
-            </h2>
-            <p className="text-[13px] text-[var(--muted)] mt-0.5">
-              Showing {seriesResult.total} indexed titles
-            </p>
-          </div>
+        {/* Count on its own line */}
+        <div className="text-[13px] text-[var(--muted)]">
+          <span className="tabular-nums font-semibold text-[var(--ink)]">{seriesResult.total}</span>{' '}
+          {seriesResult.total === 1 ? 'short drama' : 'short dramas'}
+        </div>
 
-          {/* Sort Controls */}
-          <div className="flex items-center gap-2">
-            <span className="text-[12px] text-[var(--muted)]">Sort:</span>
-            <div className="flex items-center gap-1 text-[13px]">
-              <Link
-                href={`/tag/${slug}?sort=popularity`}
-                className={`px-2.5 py-1 rounded-[6px] transition-colors ${
-                  sort === 'popularity'
-                    ? 'bg-[var(--crimson)] text-white font-medium'
-                    : 'text-[var(--muted)] hover:text-[var(--ink)]'
-                }`}
-              >
-                Popular
-              </Link>
-              <Link
-                href={`/tag/${slug}?sort=rating`}
-                className={`px-2.5 py-1 rounded-[6px] transition-colors ${
-                  sort === 'rating'
-                    ? 'bg-[var(--crimson)] text-white font-medium'
-                    : 'text-[var(--muted)] hover:text-[var(--ink)]'
-                }`}
-              >
-                Rating
-              </Link>
-              <Link
-                href={`/tag/${slug}?sort=newest`}
-                className={`px-2.5 py-1 rounded-[6px] transition-colors ${
-                  sort === 'newest'
-                    ? 'bg-[var(--crimson)] text-white font-medium'
-                    : 'text-[var(--muted)] hover:text-[var(--ink)]'
-                }`}
-              >
-                Newest
-              </Link>
-            </div>
-          </div>
+        {/* Sort selector below the count */}
+        <div className="flex items-center justify-end pb-2">
+          <SortSelect currentSort={sort} />
         </div>
 
         {seriesResult.items.length > 0 ? (

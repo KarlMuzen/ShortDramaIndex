@@ -1,17 +1,17 @@
 [
   {
     "slug": "ceo-romance",
-    "name": "CEO Romance",
+    "name": "CEO romance",
     "count": 8
   },
   {
     "slug": "hidden-identity",
-    "name": "Hidden Identity",
+    "name": "Hidden identity",
     "count": 7
   },
   {
     "slug": "contract-marriage",
-    "name": "Contract Marriage",
+    "name": "Contract marriage",
     "count": 6
   },
   {
@@ -21,22 +21,22 @@
   },
   {
     "slug": "second-chance",
-    "name": "Second Chance",
+    "name": "Second chance",
     "count": 4
   },
   {
     "slug": "urban-fantasy",
-    "name": "Urban Fantasy",
+    "name": "Urban fantasy",
     "count": 3
   },
   {
     "slug": "family-drama",
-    "name": "Family Drama",
+    "name": "Family drama",
     "count": 5
   },
   {
     "slug": "time-loop",
-    "name": "Time Loop",
+    "name": "Time loop",
     "count": 2
   },
   {
@@ -46,7 +46,7 @@
   },
   {
     "slug": "medical-miracle",
-    "name": "Medical Miracle",
+    "name": "Medical miracle",
     "count": 4
   }
 ]

@@ -1,22 +1,15 @@
-'use client';
+import { Metadata } from 'next';
+import { siteConfig } from '@/src/config/site';
+import { ProfileRedirect } from '@/src/components/profile/profile-redirect';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from '@/src/context/session-context';
+export const metadata: Metadata = {
+  title: `Profile | ${siteConfig.name}`,
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
-export default function ProfileRedirectPage() {
-  const router = useRouter();
-  const { user, isLoading } = useSession();
-
-  useEffect(() => {
-    if (!isLoading) {
-      if (user) {
-        router.replace(`/u/${user.handle}`);
-      } else {
-        router.replace('/sign-in');
-      }
-    }
-  }, [user, isLoading, router]);
-
-  return null;
+export default function ProfilePage() {
+  return <ProfileRedirect />;
 }

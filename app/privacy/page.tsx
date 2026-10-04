@@ -42,9 +42,9 @@ export default function PrivacyPage() {
       />
 
       <header className="space-y-2 border-b border-[var(--line)] pb-4">
-        <div className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--crimson)] uppercase tracking-wider">
+        <div className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--crimson)]">
           <Lock className="w-3.5 h-3.5" />
-          <span>Privacy & Data Protection</span>
+          <span>Privacy & data protection</span>
         </div>
         <h1 className="text-[28px] sm:text-[36px] font-semibold text-[var(--ink)] tracking-tight">
           Privacy Policy

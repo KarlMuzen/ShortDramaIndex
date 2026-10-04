@@ -42,9 +42,9 @@ export default function TermsPage() {
       />
 
       <header className="space-y-2 border-b border-[var(--line)] pb-4">
-        <div className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--crimson)] uppercase tracking-wider">
+        <div className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--crimson)]">
           <FileText className="w-3.5 h-3.5" />
-          <span>Legal Agreement</span>
+          <span>Legal agreement</span>
         </div>
         <h1 className="text-[28px] sm:text-[36px] font-semibold text-[var(--ink)] tracking-tight">
           Terms of Service
@@ -61,7 +61,7 @@ export default function TermsPage() {
             1. What the site is
           </h2>
           <p className="text-[var(--muted)]">
-            {siteConfig.name} is an informational reference database and catalog for serialized short vertical dramas. The site indexes factual metadata, titles, alternate language aliases, cast credits, and external links to official and third-party distribution channels.
+            {siteConfig.name} is an informational reference database and catalog for serialized short dramas. The site indexes factual metadata, titles, alternate language aliases, cast credits, and external links to official and third-party distribution channels.
           </p>
           <p className="text-[var(--muted)]">
             {siteConfig.name} does not host, store, stream, upload, or embed any video files. All video playback occurs on external, independent third-party platforms.

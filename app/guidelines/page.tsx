@@ -5,10 +5,31 @@ import { siteConfig } from '@/src/config/site';
 import { Breadcrumb } from '@/src/components/ui/breadcrumb';
 import { BookOpen, CheckCircle2, HelpCircle, Shield, FileText } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'Community Editing & Indexing Guidelines',
-  description: 'Standards for title naming conventions, disambiguation rules, aliases, and verification in ShortDramaIndex.',
-};
+export function generateMetadata(): Metadata {
+  const title = 'Community Editing Guidelines';
+  const description = `Standards for title naming conventions, disambiguation rules, aliases, and verification on ${siteConfig.name}.`;
+  const canonicalUrl = `${siteConfig.baseUrl}/guidelines`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: 'website',
+      siteName: siteConfig.name,
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+    },
+  };
+}
 
 export default function GuidelinesPage() {
   return (
@@ -21,7 +42,7 @@ export default function GuidelinesPage() {
       />
 
       <header className="space-y-2 border-b border-[var(--line)] pb-4">
-        <div className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--crimson)] uppercase tracking-wider">
+        <div className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--crimson)]">
           <BookOpen className="w-3.5 h-3.5" />
           <span>Reference Standard</span>
         </div>
@@ -37,7 +58,7 @@ export default function GuidelinesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Desktop Sticky Anchored TOC */}
         <aside className="hidden lg:block lg:col-span-4 sticky top-16 space-y-3 p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[12px]">
-          <span className="text-[12px] font-semibold uppercase tracking-wider text-[var(--muted)] block">
+          <span className="text-[12px] font-semibold text-[var(--muted)] block">
             Table of Contents
           </span>
           <nav className="space-y-2 text-[13px]">

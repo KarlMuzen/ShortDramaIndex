@@ -5,10 +5,31 @@ import { siteConfig } from '@/src/config/site';
 import { Breadcrumb } from '@/src/components/ui/breadcrumb';
 import { Info, Database, Search, ShieldCheck, ArrowRight } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: `About ${siteConfig.name} | The Reference Index`,
-  description: `Learn about ${siteConfig.name}, the calm reference library and disambiguation catalog for global short vertical dramas.`,
-};
+export function generateMetadata(): Metadata {
+  const title = `About ${siteConfig.name}`;
+  const description = `Learn about ${siteConfig.name}, the calm reference library and disambiguation catalog for short dramas.`;
+  const canonicalUrl = `${siteConfig.baseUrl}/about`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: 'website',
+      siteName: siteConfig.name,
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+    },
+  };
+}
 
 export default function AboutPage() {
   return (
@@ -21,7 +42,7 @@ export default function AboutPage() {
       />
 
       <header className="space-y-2 border-b border-[var(--line)] pb-4">
-        <div className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--crimson)] uppercase tracking-wider">
+        <div className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--crimson)]">
           <Info className="w-3.5 h-3.5" />
           <span>About the Index</span>
         </div>

@@ -1407,13 +1407,13 @@ export async function checkRedirect(fromId: number): Promise<number | null> {
 
 const PLATFORM_DESCRIPTIONS: Record<string, string> = {
   'lumen-tv':
-    'Lumen TV is a dedicated micro-drama streaming service focusing on vertical romantic sagas, CEO melodramas, and urban fantasy series with multi-language subtitle tracks.',
+    'Lumen TV is a dedicated streaming service focusing on romantic sagas, CEO melodramas, and urban fantasy series with multi-language subtitle tracks.',
   'reelway':
     'Reelway specializes in fast-paced episodic thrillers, revenge narratives, and second-chance family dramas designed specifically for mobile viewing.',
   'shortline':
-    'Shortline hosts an expansive international catalog of mini vertical dramas with high-frequency episodic releases and localized dubs.',
+    'Shortline hosts an expansive international catalog of short dramas with high-frequency episodic releases and localized dubs.',
   'youtube':
-    'Official and publisher-licensed YouTube channel releases for short vertical drama web series, pilot episodes, and complete compilation playlists.',
+    'Official and publisher-licensed YouTube channel releases for short drama series, pilot episodes, and complete compilation playlists.',
 };
 
 const TAG_DESCRIPTIONS: Record<string, string> = {
@@ -1464,7 +1464,7 @@ export async function getPlatformBySlug(slug: string): Promise<{
         platform,
         description:
           PLATFORM_DESCRIPTIONS[platform.slug] ||
-          `${platform.name} is a streaming destination featuring short vertical drama releases and localized video series.`,
+          `${platform.name} is a streaming destination featuring short drama releases and localized video series.`,
       };
     } catch {
       return null;
@@ -1480,7 +1480,7 @@ export async function getPlatformBySlug(slug: string): Promise<{
     platform,
     description:
       PLATFORM_DESCRIPTIONS[platform.slug] ||
-      `${platform.name} is a streaming destination featuring short vertical drama releases and localized video series.`,
+      `${platform.name} is a streaming destination featuring short drama releases and localized video series.`,
   };
 }
 
@@ -1602,7 +1602,7 @@ export async function getTagBySlug(slug: string): Promise<{
         tag,
         description:
           TAG_DESCRIPTIONS[tag.slug] ||
-          `Short vertical dramas featuring ${tag.name.toLowerCase()} tropes, themes, and storyline developments.`,
+          `Short dramas featuring ${tag.name.toLowerCase()} tropes, themes, and storyline developments.`,
       };
     } catch {
       return null;
@@ -1616,7 +1616,7 @@ export async function getTagBySlug(slug: string): Promise<{
     tag,
     description:
       TAG_DESCRIPTIONS[tag.slug] ||
-      `Short vertical dramas featuring ${tag.name.toLowerCase()} tropes, themes, and storyline developments.`,
+      `Short dramas featuring ${tag.name.toLowerCase()} tropes, themes, and storyline developments.`,
   };
 }
 

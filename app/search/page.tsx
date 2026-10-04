@@ -39,7 +39,7 @@ export async function generateMetadata({
 
   const description = q
     ? `Search results and multilingual aliases for "${q}" across official short drama platforms.`
-    : 'Search multilingual titles, Chinese duanju aliases, and official watch links on the short drama database.';
+    : 'Search multilingual titles, aliases, and official watch links on the short drama database.';
 
   return {
     title,
