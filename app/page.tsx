@@ -205,7 +205,7 @@ export default async function HomePage() {
                     <span className="text-[var(--muted)]">
                       on{' '}
                       <Link
-                        href={titlePath({ id: item.seriesId, slug: item.seriesSlug })}
+                        href={titlePath({ slug: item.seriesSlug, shortId: item.seriesShortId })}
                         className="text-[var(--ink)] font-medium hover:text-[var(--crimson)] hover:underline"
                       >
                         {item.seriesTitle}

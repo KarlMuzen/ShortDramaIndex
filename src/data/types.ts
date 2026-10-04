@@ -61,6 +61,7 @@ export interface Tag {
 
 export interface Person {
   id: number;
+  shortId: string;
   slug: string;
   name: string;
   nativeName?: string;
@@ -77,6 +78,7 @@ export interface PersonRole {
 
 export interface Series {
   id: number;
+  shortId: string;
   slug: string;
   title: string;
   romanizedTitle?: string;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/src/lib/utils';
 import { CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { VerificationStatus } from '@/src/data/types';
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
-import { getSeriesById } from '@/src/data/repository';
+import { getSeriesById, getAllSeries } from '@/src/data/repository';
 import { parseTitleParam } from '@/src/lib/urls';
 import { TitleMergeView } from '@/src/components/title/title-merge-view';
 
@@ -40,10 +40,16 @@ export default async function TitleMergePage({
     notFound();
   }
 
-  const series = await getSeriesById(id);
+  const [series, allSeries] = await Promise.all([
+    getSeriesById(id),
+    getAllSeries(),
+  ]);
+
   if (!series) {
     notFound();
   }
 
-  return <TitleMergeView sourceSeries={series} />;
+  const candidates = allSeries.filter((s) => s.id !== series.id);
+
+  return <TitleMergeView sourceSeries={series} initialCandidates={candidates} />;
 }

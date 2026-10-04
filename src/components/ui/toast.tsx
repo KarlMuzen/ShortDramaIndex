@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/src/lib/utils';
 import { CheckCircle2, AlertTriangle, Info, X } from 'lucide-react';
 import { IconButton } from './icon-button';
 

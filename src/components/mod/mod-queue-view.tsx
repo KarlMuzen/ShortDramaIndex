@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { UserReport, ReportType } from '@/src/data/types';
-import { mockReports, mockSeriesList } from '@/src/data/mock';
+import { UserReport, Series } from '@/src/data/types';
 import { resolveModerationReportAction } from '@/src/data/actions';
 import { RoleGate } from '@/src/components/auth/role-gate';
+import { titlePath } from '@/src/lib/urls';
 import { useToast } from '@/src/components/ui/toast';
 import { Button } from '@/src/components/ui/button';
 import { Dialog } from '@/src/components/ui/dialog';
@@ -26,18 +26,32 @@ import {
   Keyboard,
 } from 'lucide-react';
 
-export function ModQueueView() {
+interface ModQueueViewProps {
+  initialReports?: UserReport[];
+  seriesList?: Series[];
+}
+
+export function ModQueueView({
+  initialReports = [],
+  seriesList = [],
+}: ModQueueViewProps) {
   return (
     <RoleGate requiredRole="moderator">
-      <ModQueueContent />
+      <ModQueueContent initialReports={initialReports} seriesList={seriesList} />
     </RoleGate>
   );
 }
 
-function ModQueueContent() {
+function ModQueueContent({
+  initialReports,
+  seriesList,
+}: {
+  initialReports: UserReport[];
+  seriesList: Series[];
+}) {
   const { showToast } = useToast();
 
-  const [reports, setReports] = useState<UserReport[]>(mockReports);
+  const [reports, setReports] = useState<UserReport[]>(initialReports);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('open');
@@ -158,7 +172,7 @@ function ModQueueContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  const currentSeries = mockSeriesList.find(
+  const currentSeries = seriesList.find(
     (s) => s.id === selectedReport?.seriesId
   );
 

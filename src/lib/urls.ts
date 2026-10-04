@@ -30,43 +30,47 @@ export function slugify(text: string, fallback?: string): string {
 }
 
 /**
- * Returns canonical title path: /title/{id}-{slug}
+ * Returns canonical title path: /title/<slug>-<shortId>
  */
-export function titlePath(series: { id: number; slug: string }): string {
-  return `/title/${series.id}-${series.slug}`;
+export function titlePath(series: { slug: string; shortId?: string; id?: number | string }): string {
+  const shortId = series.shortId || (series.id !== undefined ? String(series.id) : '');
+  return `/title/${series.slug}-${shortId}`;
 }
 
 /**
- * Parses numeric ID from title route parameter (e.g., "101-hidden-billionaire" -> 101)
+ * Parses 5-character base36 short ID from title route parameter (e.g., "hidden-love-a1b2c" -> "a1b2c")
  */
-export function parseTitleParam(param: string): number | null {
+export function parseTitleParam(param: string): string | null {
   if (!param) return null;
-  const match = param.match(/^(\d+)/);
-  if (!match) return null;
-  const id = parseInt(match[1], 10);
-  return isNaN(id) ? null : id;
+  const clean = param.trim().toLowerCase();
+  if (/^[a-z0-9]{5}$/.test(clean)) return clean;
+  const match = clean.match(/-([a-z0-9]{5})$/);
+  if (match) return match[1];
+  return null;
 }
 
 /**
- * Returns canonical person path: /person/{id}-{slug}
+ * Returns canonical person path: /person/<slug>-<shortId>
  */
-export function personPath(person: { id: number; slug: string }): string {
-  return `/person/${person.id}-${person.slug}`;
+export function personPath(person: { slug: string; shortId?: string; id?: number | string }): string {
+  const shortId = person.shortId || (person.id !== undefined ? String(person.id) : '');
+  return `/person/${person.slug}-${shortId}`;
 }
 
 /**
- * Parses numeric ID from person route parameter
+ * Parses 5-character base36 short ID from person route parameter
  */
-export function parsePersonParam(param: string): number | null {
+export function parsePersonParam(param: string): string | null {
   if (!param) return null;
-  const match = param.match(/^(\d+)/);
-  if (!match) return null;
-  const id = parseInt(match[1], 10);
-  return isNaN(id) ? null : id;
+  const clean = param.trim().toLowerCase();
+  if (/^[a-z0-9]{5}$/.test(clean)) return clean;
+  const match = clean.match(/-([a-z0-9]{5})$/);
+  if (match) return match[1];
+  return null;
 }
 
 /**
- * Returns canonical tag path
+ * Returns canonical tag path: /tag/<slug>
  */
 export function tagPath(tag: { slug: string } | string): string {
   const slug = typeof tag === 'string' ? tag : tag.slug;
@@ -74,7 +78,7 @@ export function tagPath(tag: { slug: string } | string): string {
 }
 
 /**
- * Returns canonical platform path
+ * Returns canonical platform path: /platform/<slug>
  */
 export function platformPath(platform: { slug: string } | string): string {
   const slug = typeof platform === 'string' ? platform : platform.slug;

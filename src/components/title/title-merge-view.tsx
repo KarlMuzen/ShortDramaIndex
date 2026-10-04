@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { titlePath } from '@/src/lib/urls';
-import { mockSeriesList } from '@/src/data/mock';
 import { Series } from '@/src/data/types';
 import { mergeSeriesAction } from '@/src/data/actions';
 import { RoleGate } from '@/src/components/auth/role-gate';
@@ -25,23 +24,38 @@ import {
   Check,
 } from 'lucide-react';
 
-export function TitleMergeView({ sourceSeries }: { sourceSeries: Series }) {
+export function TitleMergeView({
+  sourceSeries,
+  initialCandidates = [],
+}: {
+  sourceSeries: Series;
+  initialCandidates?: Series[];
+}) {
   return (
     <RoleGate requiredRole="editor">
-      <TitleMergeContent sourceSeries={sourceSeries} />
+      <TitleMergeContent
+        sourceSeries={sourceSeries}
+        initialCandidates={initialCandidates}
+      />
     </RoleGate>
   );
 }
 
-function TitleMergeContent({ sourceSeries }: { sourceSeries: Series }) {
+function TitleMergeContent({
+  sourceSeries,
+  initialCandidates,
+}: {
+  sourceSeries: Series;
+  initialCandidates: Series[];
+}) {
   const router = useRouter();
   const { showToast } = useToast();
 
   // Candidates for merge
-  const candidatePool = mockSeriesList.filter((s) => s.id !== sourceSeries.id);
+  const candidatePool = initialCandidates.filter((s) => s.id !== sourceSeries.id);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTarget, setSelectedTarget] = useState<Series>(candidatePool[0]);
+  const [selectedTarget, setSelectedTarget] = useState<Series | undefined>(candidatePool[0]);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [mergeReason, setMergeReason] = useState('Duplicate catalog entry with identical storyline and cast');
   const [isMerging, setIsMerging] = useState(false);

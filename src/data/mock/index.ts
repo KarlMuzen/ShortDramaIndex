@@ -259,19 +259,20 @@ export const mockTags: Tag[] = [
 ];
 
 export const mockPeople: Person[] = [
-  { id: 201, slug: 'lin-yuxin', name: 'Lin Yuxin', nativeName: '林雨欣', role: 'actor', dramaCount: 14 },
-  { id: 202, slug: 'zhao-haoran', name: 'Zhao Haoran', nativeName: '赵浩然', role: 'actor', dramaCount: 19 },
-  { id: 203, slug: 'song-ji-won', name: 'Song Ji-won', nativeName: '송지원', role: 'actor', dramaCount: 8 },
-  { id: 204, slug: 'chen-kai-ming', name: 'Chen Kaiming', nativeName: '陈凯明', role: 'director', dramaCount: 11 },
-  { id: 205, slug: 'sophia-alvarez', name: 'Sophia Alvarez', role: 'actor', dramaCount: 6 },
-  { id: 206, slug: 'wang-ze-lin', name: 'Wang Zelin', nativeName: '王泽林', role: 'actor', dramaCount: 12 },
-  { id: 207, slug: 'gu-xing-yue', name: 'Gu Xingyue', nativeName: '顾星月', role: 'actor', dramaCount: 9 },
-  { id: 208, slug: 'zhang-wei-lun', name: 'Zhang Weilun', nativeName: '张伟伦', role: 'director', dramaCount: 15 },
+  { id: 201, shortId: 'p201a', slug: 'lin-yuxin', name: 'Lin Yuxin', nativeName: '林雨欣', role: 'actor', dramaCount: 14 },
+  { id: 202, shortId: 'p202b', slug: 'zhao-haoran', name: 'Zhao Haoran', nativeName: '赵浩然', role: 'actor', dramaCount: 19 },
+  { id: 203, shortId: 'p203c', slug: 'song-ji-won', name: 'Song Ji-won', nativeName: '송지원', role: 'actor', dramaCount: 8 },
+  { id: 204, shortId: 'p204d', slug: 'chen-kai-ming', name: 'Chen Kaiming', nativeName: '陈凯明', role: 'director', dramaCount: 11 },
+  { id: 205, shortId: 'p205e', slug: 'sophia-alvarez', name: 'Sophia Alvarez', role: 'actor', dramaCount: 6 },
+  { id: 206, shortId: 'p206f', slug: 'wang-ze-lin', name: 'Wang Zelin', nativeName: '王泽林', role: 'actor', dramaCount: 12 },
+  { id: 207, shortId: 'p207g', slug: 'gu-xing-yue', name: 'Gu Xingyue', nativeName: '顾星月', role: 'actor', dramaCount: 9 },
+  { id: 208, shortId: 'p208h', slug: 'zhang-wei-lun', name: 'Zhang Weilun', nativeName: '张伟伦', role: 'director', dramaCount: 15 },
 ];
 
 export const mockSeriesList: Series[] = [
   {
     id: 101,
+    shortId: 's101a',
     slug: 'the-billionaires-secret-fiancee',
     title: 'The Billionaire’s Secret Fiancée',
     romanizedTitle: 'Ba Zong De Mi Mi Wei Hun Qi',
@@ -398,6 +399,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 102,
+    shortId: 's102b',
     slug: 'reborn-heiress-strikes-back',
     title: 'Reborn Heiress Strikes Back',
     romanizedTitle: 'Chong Sheng Qian Jin Ni Xi Lu',
@@ -498,6 +500,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 103,
+    shortId: 's103c',
     slug: 'the-miracle-doctor-in-the-city',
     title: 'The Miracle Doctor in the City',
     romanizedTitle: 'Jue Shi Shen Yi Zai Du Shi',
@@ -598,6 +601,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 104,
+    shortId: 's104d',
     slug: 'midnight-boardroom-romance',
     title: 'Midnight Boardroom Romance',
     romanizedTitle: 'Shen Ye Dong Shi Hui Zhi Lian',
@@ -688,6 +692,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 105,
+    shortId: 's105e',
     slug: 'accidental-empress-in-metropolis',
     title: 'Accidental Empress in Metropolis',
     romanizedTitle: 'Huang Hou Niang Niang Zai Xian Dai',
@@ -765,6 +770,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 106,
+    shortId: 's106f',
     slug: 'the-tycoons-discarded-ex-wife',
     title: 'The Tycoon’s Discarded Ex-Wife',
     romanizedTitle: 'Qian Qi Gui Lai Da Lao Gui Fu',
@@ -856,6 +862,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 107,
+    shortId: 's107g',
     slug: 'whispers-of-the-shadow-heir',
     title: 'Whispers of the Shadow Heir',
     romanizedTitle: 'An Ye Zhi Zi',
@@ -920,6 +927,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 108,
+    shortId: 's108h',
     slug: 'contract-tutor-to-the-crown-prince',
     title: 'Contract Tutor to the Crown Prince',
     romanizedTitle: 'Huang Tai Zi De Qi Yue Jia Jiao',
@@ -983,6 +991,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 109,
+    shortId: 's109j',
     slug: 'the-billionaire-undercover-bodyguard',
     title: 'The Billionaire Undercover Bodyguard',
     romanizedTitle: 'Shen Hao Bao Biao',
@@ -1074,6 +1083,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 110,
+    shortId: 's110k',
     slug: 'twin-heirs-swap-destiny',
     title: 'Twin Heirs Swap Destiny',
     romanizedTitle: 'Shuang Bao Tai Huan Shen Ji',
@@ -1146,6 +1156,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 111,
+    shortId: 's111m',
     slug: 'echoes-of-a-second-chance',
     title: 'Echoes of a Second Chance',
     romanizedTitle: 'Zai Ci Yu Ni Xiang Yu',
@@ -1218,6 +1229,7 @@ export const mockSeriesList: Series[] = [
   },
   {
     id: 112,
+    shortId: 's112n',
     slug: 'the-secret-matriarch-of-riverdale',
     title: 'The Secret Matriarch of Riverdale',
     romanizedTitle: 'Yin Shi Hao Men Zhang Men Ren',
