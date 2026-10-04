@@ -1,0 +1,229 @@
+[
+  {
+    "series_id": 101,
+    "platform_slug": "lumen-tv",
+    "region": "Global",
+    "dub_language": "en",
+    "subtitle_languages": [
+      "en",
+      "es",
+      "id",
+      "th"
+    ],
+    "url": "https://example.com/lumentv/series/101",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 101,
+    "platform_slug": "reelway",
+    "region": "Latin America",
+    "dub_language": "es",
+    "subtitle_languages": [
+      "es",
+      "pt"
+    ],
+    "url": "https://example.com/reelway/watch/secret-fiancee",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 101,
+    "platform_slug": "youtube",
+    "region": "Global",
+    "dub_language": null,
+    "subtitle_languages": [
+      "en"
+    ],
+    "url": "https://www.youtube.com/playlist?list=PL_invented_fiancee_101",
+    "is_official": false,
+    "link_status": "active"
+  },
+  {
+    "series_id": 102,
+    "platform_slug": "shortline",
+    "region": "Global",
+    "dub_language": null,
+    "subtitle_languages": [
+      "en",
+      "zh",
+      "vi"
+    ],
+    "url": "https://example.com/shortline/show/heiress-rebirth",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 102,
+    "platform_slug": "lumen-tv",
+    "region": "North America",
+    "dub_language": "en",
+    "subtitle_languages": [
+      "en"
+    ],
+    "url": "https://example.com/lumentv/series/102",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 103,
+    "platform_slug": "lumen-tv",
+    "region": "Global",
+    "dub_language": null,
+    "subtitle_languages": [
+      "en",
+      "zh"
+    ],
+    "url": "https://example.com/lumentv/series/103",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 103,
+    "platform_slug": "youtube",
+    "region": "Global",
+    "dub_language": null,
+    "subtitle_languages": [
+      "en"
+    ],
+    "url": "https://www.youtube.com/watch?v=mock_doctor_ep1",
+    "is_official": false,
+    "link_status": "active"
+  },
+  {
+    "series_id": 104,
+    "platform_slug": "shortline",
+    "region": "Global",
+    "dub_language": null,
+    "subtitle_languages": [
+      "en",
+      "ko",
+      "zh",
+      "ja"
+    ],
+    "url": "https://example.com/shortline/show/midnight-boardroom",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 104,
+    "platform_slug": "reelway",
+    "region": "North America",
+    "dub_language": "en",
+    "subtitle_languages": [
+      "en"
+    ],
+    "url": "https://example.com/reelway/watch/midnight-boardroom",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 105,
+    "platform_slug": "lumen-tv",
+    "region": "Global",
+    "dub_language": null,
+    "subtitle_languages": [
+      "en",
+      "zh",
+      "th"
+    ],
+    "url": "https://example.com/lumentv/series/105",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 106,
+    "platform_slug": "reelway",
+    "region": "Global",
+    "dub_language": "en",
+    "subtitle_languages": [
+      "en",
+      "es",
+      "fr"
+    ],
+    "url": "https://example.com/reelway/watch/discarded-ex-wife",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 106,
+    "platform_slug": "shortline",
+    "region": "Asia",
+    "dub_language": null,
+    "subtitle_languages": [
+      "zh",
+      "en"
+    ],
+    "url": "https://example.com/shortline/show/ex-wife-returns",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 107,
+    "platform_slug": "lumen-tv",
+    "region": "Global",
+    "dub_language": null,
+    "subtitle_languages": [
+      "en",
+      "zh",
+      "es"
+    ],
+    "url": "https://example.com/lumentv/series/107",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 108,
+    "platform_slug": "shortline",
+    "region": "Global",
+    "dub_language": null,
+    "subtitle_languages": [
+      "en",
+      "zh"
+    ],
+    "url": "https://example.com/shortline/show/contract-tutor",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 109,
+    "platform_slug": "lumen-tv",
+    "region": "Global",
+    "dub_language": null,
+    "subtitle_languages": [
+      "en",
+      "zh",
+      "es",
+      "pt"
+    ],
+    "url": "https://example.com/lumentv/series/109",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 109,
+    "platform_slug": "reelway",
+    "region": "Latin America",
+    "dub_language": "es",
+    "subtitle_languages": [
+      "es"
+    ],
+    "url": "https://example.com/reelway/watch/undercover-bodyguard",
+    "is_official": true,
+    "link_status": "active"
+  },
+  {
+    "series_id": 110,
+    "platform_slug": "shortline",
+    "region": "Global",
+    "dub_language": null,
+    "subtitle_languages": [
+      "en",
+      "pt",
+      "zh"
+    ],
+    "url": "https://example.com/shortline/show/twin-heirs",
+    "is_official": true,
+    "link_status": "active"
+  }
+]

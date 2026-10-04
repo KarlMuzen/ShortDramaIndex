@@ -6,7 +6,7 @@ import { titlePath, tagPath, platformPath } from '@/src/lib/urls';
 import { Poster } from '@/src/components/ui/poster';
 import { EmptyState } from '@/src/components/ui/empty-state';
 import { HeroSearch } from '@/src/components/home/hero-search';
-import { Sparkles, Clock, Globe2, Tag as TagIcon, Tv } from 'lucide-react';
+import { Tag as TagIcon, Tv } from 'lucide-react';
 
 export const revalidate = 3600;
 
@@ -148,42 +148,38 @@ export default async function HomePage() {
         </div>
 
         {recentlyAddedAliases.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="divide-y divide-[var(--line)] border-y border-[var(--line)] text-[13px]">
             {recentlyAddedAliases.map((item, idx) => (
               <div
                 key={idx}
-                className="p-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[8px] hover:border-[var(--line-strong)] transition-colors flex flex-col justify-between space-y-2"
+                className="py-2.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
               >
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      lang={item.alias.language}
-                      className="font-medium text-[14px] text-[var(--ink)] line-clamp-1"
-                    >
-                      {item.alias.text}
-                    </span>
-                    <span className="text-[11px] font-mono uppercase px-1.5 py-0.5 bg-[var(--surface-subtle)] border border-[var(--line)] rounded text-[var(--muted)] shrink-0">
-                      {item.alias.language}
-                    </span>
-                  </div>
-
-                  <p className="text-[12px] text-[var(--muted)] line-clamp-1">
-                    Added to:{' '}
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+                  <span
+                    lang={item.alias.language}
+                    className="font-medium text-[var(--ink)]"
+                  >
+                    {item.alias.text}
+                  </span>
+                  <span className="text-[11px] font-mono uppercase text-[var(--muted)]">
+                    [{item.alias.language}]
+                  </span>
+                  <span className="text-[var(--muted)]">
+                    on{' '}
                     <Link
                       href={`/title/${item.seriesId}-${item.seriesSlug}`}
                       className="text-[var(--ink)] font-medium hover:text-[var(--crimson)] hover:underline"
                     >
                       {item.seriesTitle}
                     </Link>
-                  </p>
+                  </span>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-[var(--muted)] pt-1 border-t border-[var(--line)]">
-                  <span>Source: {item.alias.source || 'Community'}</span>
-                  {item.alias.addedAt && (
-                    <span className="tabular-nums">{item.alias.addedAt}</span>
-                  )}
-                </div>
+                {item.relativeTime && (
+                  <span className="text-[12px] text-[var(--muted)] tabular-nums shrink-0">
+                    {item.relativeTime}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -195,8 +191,8 @@ export default async function HomePage() {
         )}
       </section>
 
-      {/* Section 3: Browse by Tag & Platform */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+      {/* Section 3: Browse by Tag, Platform & Language */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
         {/* Browse by Tag */}
         <section aria-labelledby="tags-heading" className="space-y-3">
           <div className="flex items-center gap-2 border-b border-[var(--line)] pb-2">
@@ -214,11 +210,11 @@ export default async function HomePage() {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-[8px] text-[13px] text-[var(--ink)] hover:border-[var(--crimson)] hover:text-[var(--crimson)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crimson)]"
               >
                 <span>{tag.name}</span>
-                {tag.count && (
+                {tag.count ? (
                   <span className="text-[11px] text-[var(--muted)] tabular-nums">
                     {tag.count}
                   </span>
-                )}
+                ) : null}
               </Link>
             ))}
           </div>
@@ -241,6 +237,37 @@ export default async function HomePage() {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-[8px] text-[13px] text-[var(--ink)] hover:border-[var(--crimson)] hover:text-[var(--crimson)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crimson)]"
               >
                 <span>{plat.name}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Browse by Language */}
+        <section aria-labelledby="languages-heading" className="space-y-3">
+          <div className="flex items-center gap-2 border-b border-[var(--line)] pb-2">
+            <h2 id="languages-heading" className="text-[16px] font-semibold text-[var(--ink)]">
+              Browse by original language
+            </h2>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            {browseLanguages.map((lang) => (
+              <Link
+                key={lang.code}
+                href={`/search?lang=${lang.code}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-[8px] text-[13px] text-[var(--ink)] hover:border-[var(--crimson)] hover:text-[var(--crimson)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crimson)]"
+              >
+                <span>{lang.label}</span>
+                {lang.nativeLabel && lang.nativeLabel !== lang.label && (
+                  <span className="text-[11px] text-[var(--muted)]">
+                    ({lang.nativeLabel})
+                  </span>
+                )}
+                {typeof lang.count === 'number' && lang.count > 0 && (
+                  <span className="text-[11px] text-[var(--muted)] tabular-nums">
+                    {lang.count}
+                  </span>
+                )}
               </Link>
             ))}
           </div>

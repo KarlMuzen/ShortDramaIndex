@@ -1,0 +1,52 @@
+[
+  {
+    "slug": "ceo-romance",
+    "name": "CEO Romance",
+    "count": 8
+  },
+  {
+    "slug": "hidden-identity",
+    "name": "Hidden Identity",
+    "count": 7
+  },
+  {
+    "slug": "contract-marriage",
+    "name": "Contract Marriage",
+    "count": 6
+  },
+  {
+    "slug": "revenge",
+    "name": "Revenge",
+    "count": 5
+  },
+  {
+    "slug": "second-chance",
+    "name": "Second Chance",
+    "count": 4
+  },
+  {
+    "slug": "urban-fantasy",
+    "name": "Urban Fantasy",
+    "count": 3
+  },
+  {
+    "slug": "family-drama",
+    "name": "Family Drama",
+    "count": 5
+  },
+  {
+    "slug": "time-loop",
+    "name": "Time Loop",
+    "count": 2
+  },
+  {
+    "slug": "undercover",
+    "name": "Undercover",
+    "count": 3
+  },
+  {
+    "slug": "medical-miracle",
+    "name": "Medical Miracle",
+    "count": 4
+  }
+]

@@ -173,6 +173,30 @@ export default async function TitlePage({ params }: TitlePageProps) {
   const allAliasTexts = series.aliases.map((a) => a.text);
   const canonicalUrl = `${siteConfig.baseUrl}${titlePath(series)}`;
 
+  const actors = series.cast
+    ?.filter((c) => c.roleType === 'actor')
+    .map((c) => ({
+      '@type': 'Person',
+      name: c.person.name,
+      url: `${siteConfig.baseUrl}${personPath(c.person)}`,
+    })) || [];
+
+  const directors = series.cast
+    ?.filter((c) => c.roleType === 'director')
+    .map((c) => ({
+      '@type': 'Person',
+      name: c.person.name,
+      url: `${siteConfig.baseUrl}${personPath(c.person)}`,
+    })) || [];
+
+  const creators = series.cast
+    ?.filter((c) => c.roleType === 'writer' || c.roleType === 'producer')
+    .map((c) => ({
+      '@type': 'Person',
+      name: c.person.name,
+      url: `${siteConfig.baseUrl}${personPath(c.person)}`,
+    })) || [];
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -181,9 +205,9 @@ export default async function TitlePage({ params }: TitlePageProps) {
         '@id': `${canonicalUrl}/#series`,
         url: canonicalUrl,
         name: series.title,
-        alternateName: allAliasTexts,
-        numberOfEpisodes: series.episodeCount,
-        inLanguage: series.originalLanguage,
+        ...(allAliasTexts.length > 0 ? { alternateName: allAliasTexts } : {}),
+        ...(series.episodeCount ? { numberOfEpisodes: series.episodeCount } : {}),
+        ...(series.originalLanguage ? { inLanguage: series.originalLanguage } : {}),
         ...(originCountryName
           ? {
               countryOfOrigin: {
@@ -192,14 +216,14 @@ export default async function TitlePage({ params }: TitlePageProps) {
               },
             }
           : {}),
-        genre: series.tags.map((t) => t.name),
-        datePublished: String(series.year),
-        description: series.synopsis,
-        actor: series.cast.map((c) => ({
-          '@type': 'Person',
-          name: c.person.name,
-          url: `${siteConfig.baseUrl}${personPath(c.person)}`,
-        })),
+        ...(series.tags && series.tags.length > 0
+          ? { genre: series.tags.map((t) => t.name) }
+          : {}),
+        ...(series.year ? { datePublished: String(series.year) } : {}),
+        ...(series.synopsis ? { description: series.synopsis } : {}),
+        ...(actors.length > 0 ? { actor: actors } : {}),
+        ...(directors.length > 0 ? { director: directors } : {}),
+        ...(creators.length > 0 ? { creator: creators } : {}),
         ...(series.ratingCount >= 10
           ? {
               aggregateRating: {
@@ -269,10 +293,11 @@ export default async function TitlePage({ params }: TitlePageProps) {
         ]}
       />
 
-      {/* Mobile Title & Poster Block (single column with small Poster beside title block) */}
-      <div className="lg:hidden space-y-4">
-        <div className="flex gap-4 items-start">
-          <div className="w-24 sm:w-28 shrink-0">
+      {/* Main Layout: Below 1024px single column; From 1024px sticky 320px left column & right content column */}
+      <div className="flex flex-col lg:flex-row gap-5 sm:gap-6 lg:gap-10 items-start">
+        {/* Left Column (Desktop) / Contents (Mobile): Poster and TitleActions */}
+        <aside className="contents lg:block lg:w-[320px] lg:shrink-0 lg:sticky lg:top-20 lg:space-y-4">
+          <div className="order-1 lg:order-none w-24 sm:w-28 max-w-[112px] lg:max-w-none lg:w-full shrink-0">
             <Poster
               title={series.title}
               year={series.year}
@@ -281,98 +306,36 @@ export default async function TitlePage({ params }: TitlePageProps) {
               className="w-full"
             />
           </div>
-          <div className="flex-1 min-w-0 space-y-1.5">
-            <h1 className="text-[22px] sm:text-[26px] font-semibold text-[var(--ink)] tracking-tight leading-tight">
-              {series.title}
-            </h1>
-            {primaryOriginalAlias && (
-              <p className="text-[13px] text-[var(--ink)]">
-                <span className="text-[var(--muted)] text-[11px] mr-1.5">{originalLangName}:</span>
-                <span lang={series.originalLanguage}>{primaryOriginalAlias.text}</span>
-              </p>
-            )}
-            {series.romanizedTitle && (
-              <p className="text-[11px] text-[var(--muted)]">
-                <span className="mr-1.5">Romanized:</span>
-                <span>{series.romanizedTitle}</span>
-              </p>
-            )}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[var(--muted)] pt-1 border-t border-[var(--line)]">
-              <span className="tabular-nums font-semibold text-[var(--ink)]">{series.year}</span>
-              {originCountryName && <span>{originCountryName}</span>}
-              <span className="tabular-nums">{series.episodeCount} episodes</span>
-              {series.avgEpisodeMinutes ? (
-                <span className="tabular-nums">{series.avgEpisodeMinutes} min per episode</span>
-              ) : null}
-              {series.productionStatus && (
-                <span className="capitalize">{series.productionStatus}</span>
-              )}
-            </div>
+          <div className="order-3 lg:order-none w-full">
+            <TitleActions series={series} />
           </div>
-        </div>
-
-        {/* Mobile Actions */}
-        <TitleActions series={series} />
-
-        {/* Mobile Synopsis */}
-        <div className="pt-2 border-t border-[var(--line)]">
-          <SynopsisExpand synopsis={series.synopsis} />
-        </div>
-
-        {/* Mobile Tags */}
-        {series.tags && series.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 items-center">
-            <span className="text-[12px] text-[var(--muted)] mr-1">Tags:</span>
-            {series.tags.map((tag) => (
-              <Link key={tag.slug} href={tagPath(tag.slug)}>
-                <Tag size="sm" variant="subtle">
-                  {tag.name}
-                </Tag>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Two-Column Layout (1024px and up): Left column 320px sticky, Right column content */}
-      <div className="flex flex-col lg:flex-row gap-8 lg:gap-10 items-start">
-        {/* Left Column: 320px sticky below header, containing only Poster and TitleActions */}
-        <aside className="hidden lg:block lg:w-[320px] lg:shrink-0 space-y-4 lg:sticky lg:top-20">
-          <Poster
-            title={series.title}
-            year={series.year}
-            episodeCount={series.episodeCount}
-            priority={true}
-            className="w-full"
-          />
-          <TitleActions series={series} />
         </aside>
 
-        {/* Right Column: title block, synopsis, tags, then the sections */}
-        <div className="flex-1 min-w-0 w-full space-y-8">
-          {/* Desktop Title Header Block (no card, no background, border or radius) */}
-          <div className="hidden lg:block space-y-3">
-            <h1 className="text-[32px] font-semibold text-[var(--ink)] tracking-tight leading-tight">
+        {/* Right Column (Desktop) / Contents (Mobile): title block, synopsis, tags, then sections */}
+        <div className="contents lg:block lg:flex-1 lg:min-w-0 lg:w-full lg:space-y-8">
+          {/* Title Header Block */}
+          <div className="order-2 lg:order-none w-full space-y-2 lg:space-y-3">
+            <h1 className="text-[22px] sm:text-[26px] lg:text-[32px] font-semibold text-[var(--ink)] tracking-tight leading-tight">
               {series.title}
             </h1>
 
-            <div className="space-y-0.5 text-[14px]">
+            <div className="space-y-0.5 text-[13px] lg:text-[14px]">
               {primaryOriginalAlias && (
                 <p className="text-[var(--ink)] font-normal">
-                  <span className="text-[var(--muted)] text-[12px] mr-1.5">{originalLangName}:</span>
+                  <span className="text-[var(--muted)] text-[11px] lg:text-[12px] mr-1.5">{originalLangName}:</span>
                   <span lang={series.originalLanguage}>{primaryOriginalAlias.text}</span>
                 </p>
               )}
 
               {series.romanizedTitle && (
-                <p className="text-[var(--muted)] text-[12px]">
+                <p className="text-[var(--muted)] text-[11px] lg:text-[12px]">
                   <span className="mr-1.5">Romanized:</span>
                   <span>{series.romanizedTitle}</span>
                 </p>
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px] text-[var(--muted)] pt-1 border-t border-[var(--line)]">
+            <div className="flex flex-wrap items-center gap-x-3 lg:gap-x-4 gap-y-1 text-[12px] lg:text-[14px] text-[var(--muted)] pt-1 border-t border-[var(--line)]">
               <span className="tabular-nums font-semibold text-[var(--ink)]">{series.year}</span>
               {originCountryName && <span>{originCountryName}</span>}
               <span className="tabular-nums">{series.episodeCount} episodes</span>
@@ -383,43 +346,45 @@ export default async function TitlePage({ params }: TitlePageProps) {
                 <span className="capitalize">{series.productionStatus}</span>
               )}
             </div>
-
-            {/* Desktop Synopsis */}
-            <div className="pt-3 border-t border-[var(--line)]">
-              <SynopsisExpand synopsis={series.synopsis} />
-            </div>
-
-            {/* Desktop Tags */}
-            {series.tags && series.tags.length > 0 && (
-              <div className="pt-1 flex flex-wrap gap-1.5 items-center">
-                <span className="text-[12px] text-[var(--muted)] mr-1">Tags:</span>
-                {series.tags.map((tag) => (
-                  <Link key={tag.slug} href={tagPath(tag.slug)}>
-                    <Tag size="sm" variant="subtle">
-                      {tag.name}
-                    </Tag>
-                  </Link>
-                ))}
-              </div>
-            )}
           </div>
 
+          {/* Synopsis */}
+          <div className="order-4 lg:order-none w-full pt-3 border-t border-[var(--line)]">
+            <SynopsisExpand synopsis={series.synopsis} />
+          </div>
+
+          {/* Tags */}
+          {series.tags && series.tags.length > 0 && (
+            <div className="order-5 lg:order-none w-full pt-1 flex flex-wrap gap-1.5 items-center">
+              <span className="text-[12px] text-[var(--muted)] mr-1">Tags:</span>
+              {series.tags.map((tag) => (
+                <Link key={tag.slug} href={tagPath(tag.slug)}>
+                  <Tag size="sm" variant="subtle">
+                    {tag.name}
+                  </Tag>
+                </Link>
+              ))}
+            </div>
+          )}
+
           {/* In-Page Quick Nav Sticky Bar */}
-          <TitleNav />
+          <div className="order-6 lg:order-none w-full">
+            <TitleNav />
+          </div>
 
           {/* Section 1: Names ("Also Known As" Ledger) */}
-          <section id="names" className="scroll-mt-16">
+          <section id="names" className="order-7 lg:order-none w-full scroll-mt-16">
             <AliasLedger series={series} />
           </section>
 
           {/* Section 2: Where to Watch */}
-          <section id="watch" className="scroll-mt-16">
+          <section id="watch" className="order-8 lg:order-none w-full scroll-mt-16">
             <WhereToWatch series={series} />
           </section>
 
           {/* Section 3: Versions */}
           {series.releases && series.releases.length > 0 && (
-            <section id="versions" className="scroll-mt-16 space-y-3">
+            <section id="versions" className="order-9 lg:order-none w-full scroll-mt-16 space-y-3">
               <div className="border-b border-[var(--line)] pb-2.5">
                 <h2 className="text-[17px] sm:text-[18px] font-semibold text-[var(--ink)]">
                   Versions
@@ -489,7 +454,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
 
           {/* Section 4: Cast and Crew */}
           {series.cast && series.cast.length > 0 && (
-            <section id="cast" className="scroll-mt-16 space-y-6">
+            <section id="cast" className="order-10 lg:order-none w-full scroll-mt-16 space-y-6">
               <div className="border-b border-[var(--line)] pb-2.5">
                 <h2 className="text-[17px] sm:text-[18px] font-semibold text-[var(--ink)]">
                   Cast and crew
@@ -502,7 +467,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {castMembers.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                    <h3 className="text-[12px] font-semibold text-[var(--muted)]">
                       Cast
                     </h3>
                     <ul className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
@@ -528,7 +493,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
 
                 {crewMembers.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                    <h3 className="text-[12px] font-semibold text-[var(--muted)]">
                       Crew
                     </h3>
                     <ul className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
@@ -556,7 +521,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
           )}
 
           {/* Section 5: Community Stats */}
-          <section id="community" className="scroll-mt-16">
+          <section id="community" className="order-11 lg:order-none w-full scroll-mt-16">
             <CommunityStats
               score={series.ratingScore}
               ratingCount={series.ratingCount}
@@ -565,7 +530,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
           </section>
 
           {/* Section 6: Similar Short Dramas */}
-          <section className="space-y-3">
+          <section className="order-12 lg:order-none w-full space-y-3">
             <div className="border-b border-[var(--line)] pb-2 flex items-center justify-between">
               <div>
                 <h2 className="text-[17px] sm:text-[18px] font-semibold text-[var(--ink)]">
@@ -618,7 +583,9 @@ export default async function TitlePage({ params }: TitlePageProps) {
           </section>
 
           {/* Title Footer History and Report Links */}
-          <TitleFooterHistory series={series} />
+          <div className="order-13 lg:order-none w-full">
+            <TitleFooterHistory series={series} />
+          </div>
         </div>
       </div>
     </div>

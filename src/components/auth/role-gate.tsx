@@ -3,8 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useSession } from '@/src/context/session-context';
-import { Button } from '@/src/components/ui/button';
-import { ShieldAlert, UserCheck, ArrowRight } from 'lucide-react';
+import { ShieldAlert, ArrowRight } from 'lucide-react';
 
 interface RoleGateProps {
   requiredRole: 'editor' | 'moderator';
@@ -12,20 +11,24 @@ interface RoleGateProps {
 }
 
 export function RoleGate({ requiredRole, children }: RoleGateProps) {
-  const { user, switchUser, availableUsers } = useSession();
+  const { user, isLoading } = useSession();
 
   const isModerator = user?.role === 'moderator';
   const isEditor = user?.role === 'editor' || isModerator;
 
   const hasAccess = requiredRole === 'moderator' ? isModerator : isEditor;
 
+  if (isLoading) {
+    return (
+      <div className="py-16 text-center text-[13px] text-[var(--muted)]">
+        Verifying permissions...
+      </div>
+    );
+  }
+
   if (hasAccess) {
     return <>{children}</>;
   }
-
-  const targetDemoUser = availableUsers.find((u) =>
-    requiredRole === 'moderator' ? u.role === 'moderator' : u.role === 'editor' || u.role === 'moderator'
-  );
 
   return (
     <div className="py-16 px-4 max-w-md mx-auto text-left space-y-6">
@@ -46,24 +49,18 @@ export function RoleGate({ requiredRole, children }: RoleGateProps) {
         <div className="p-3 bg-[var(--surface-subtle)] rounded-[8px] border border-[var(--line)] text-[12px] space-y-1">
           <span className="text-[var(--muted)]">Current account:</span>
           <div className="font-medium text-[var(--ink)]">
-            {user?.name || 'Guest'} (Role: <span className="capitalize">{user?.role || 'reader'}</span>)
+            {user ? `${user.name} (Role: ${user.role})` : 'Not signed in'}
           </div>
         </div>
 
-        {targetDemoUser && (
-          <div className="pt-2 space-y-2">
-            <span className="text-[11px] text-[var(--muted)] uppercase tracking-wider font-semibold block">
-              Quick Test Switcher
-            </span>
-            <Button
-              variant="primary"
-              size="md"
-              fullWidth
-              onClick={() => switchUser(targetDemoUser.id)}
-              leftIcon={<UserCheck className="w-4 h-4" />}
+        {!user && (
+          <div className="pt-2">
+            <Link
+              href="/sign-in"
+              className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-[var(--crimson)] text-white text-[13px] font-semibold rounded-[8px] hover:bg-[var(--crimson-hover)] transition-colors"
             >
-              Switch to {targetDemoUser.name} ({targetDemoUser.role})
-            </Button>
+              Sign in to your account
+            </Link>
           </div>
         )}
       </div>

@@ -49,7 +49,7 @@ import {
 } from 'lucide-react';
 
 export default function DevKitPage() {
-  const { user, availableUsers, switchUser } = useSession();
+  const { user } = useSession();
   const { theme, resolvedTheme, setTheme } = useTheme();
   const { showToast } = useToast();
 
@@ -89,7 +89,7 @@ export default function DevKitPage() {
           </p>
         </div>
 
-        {/* Global Controls: Theme & User Switcher */}
+        {/* Global Controls: Theme Selector */}
         <div className="flex flex-wrap items-center gap-2 p-2 bg-[var(--surface)] border border-[var(--line)] rounded-[12px]">
           {/* Theme Selector */}
           <div className="flex items-center border border-[var(--line)] rounded-[8px] p-0.5 bg-[var(--surface-subtle)]">
@@ -132,29 +132,6 @@ export default function DevKitPage() {
             >
               <Laptop className="w-4 h-4" />
             </button>
-          </div>
-
-          {/* User Role Switcher */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[12px] text-[var(--muted)] font-medium pl-1">
-              Role:
-            </span>
-            <div className="flex items-center gap-1">
-              {availableUsers.map((u) => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => switchUser(u.id)}
-                  className={`px-2.5 py-1 text-[12px] font-medium rounded-[6px] border transition-colors cursor-pointer capitalize ${
-                    user?.id === u.id
-                      ? 'bg-[var(--crimson)] text-white border-[var(--crimson)]'
-                      : 'bg-[var(--surface)] text-[var(--muted)] border-[var(--line)] hover:text-[var(--ink)]'
-                  }`}
-                >
-                  {u.role}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </div>

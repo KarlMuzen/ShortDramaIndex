@@ -8,11 +8,11 @@ import { useSession } from '@/src/context/session-context';
 import { useTheme } from '@/src/context/theme-context';
 import { IconButton } from '../ui/icon-button';
 import { Menu, MenuItem, MenuDivider } from '../ui/menu';
-import { Search, Sun, Moon, Laptop, UserCheck, X } from 'lucide-react';
+import { Search, Sun, Moon, Laptop, LogOut, User as UserIcon, X } from 'lucide-react';
 
 export function Header() {
   const router = useRouter();
-  const { user, availableUsers, switchUser } = useSession();
+  const { user, signOut, isLoading } = useSession();
   const { theme, setTheme, mounted } = useTheme();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -182,7 +182,7 @@ export function Header() {
                       className="flex items-center gap-2 pl-1.5 pr-2 py-1 rounded-[8px] hover:bg-[var(--surface-subtle)] border border-transparent hover:border-[var(--line)] transition-colors select-none cursor-pointer h-8"
                     >
                       <div className="w-6 h-6 rounded-full bg-[var(--crimson)] text-white text-[11px] font-bold flex items-center justify-center">
-                        {user.name.charAt(0)}
+                        {user.name.charAt(0).toUpperCase()}
                       </div>
                       <span className="text-[13px] font-medium text-[var(--ink)] hidden sm:inline-block max-w-[100px] truncate">
                         {user.name}
@@ -201,43 +201,55 @@ export function Header() {
 
                   <MenuDivider />
 
-                  <div className="px-3 py-1 text-[12px] text-[var(--muted)]">
-                    Switch Mock User
-                  </div>
-                  {availableUsers.map((u) => (
-                    <MenuItem
-                      key={u.id}
-                      icon={<UserCheck className="w-3.5 h-3.5" />}
-                      onClick={() => switchUser(u.id)}
-                      className={u.id === user.id ? 'text-[var(--crimson)] font-semibold' : ''}
-                    >
-                      {u.name} ({u.role})
-                    </MenuItem>
-                  ))}
-
-                  <MenuDivider />
+                  <MenuItem onClick={() => router.push(`/u/${user.handle}`)}>
+                    My profile & lists
+                  </MenuItem>
                   {user.role === 'moderator' && (
                     <MenuItem onClick={() => router.push('/mod')}>
                       Moderation queue
                     </MenuItem>
                   )}
-                  <MenuItem onClick={() => router.push('/profile')}>
-                    My reports & Profile
-                  </MenuItem>
                   <MenuItem onClick={() => router.push('/settings')}>
                     Settings
                   </MenuItem>
                   <MenuItem onClick={() => router.push('/dev/kit')}>
                     UI Kit & Tokens
                   </MenuItem>
+
+                  <MenuDivider />
+                  <MenuItem
+                    icon={<LogOut className="w-3.5 h-3.5 text-[var(--crimson)]" />}
+                    onClick={async () => {
+                      await signOut();
+                      router.push('/');
+                    }}
+                    className="text-[var(--crimson)]"
+                  >
+                    Sign out
+                  </MenuItem>
                 </Menu>
-              ) : (
+              ) : isLoading ? (
                 <div
                   className="flex items-center gap-2 pl-1.5 pr-2 py-1 rounded-[8px] h-8 bg-[var(--surface-subtle)] border border-[var(--line)] select-none"
                   aria-hidden="true"
                 >
                   <div className="w-6 h-6 rounded-full bg-[var(--line)]" />
                   <span className="hidden sm:inline-block w-16 h-3 bg-[var(--line)] rounded-[4px]" />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/sign-in"
+                    className="px-3 py-1.5 text-[13px] font-medium text-[var(--ink)] hover:text-[var(--crimson)] transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/sign-up"
+                    className="px-3 py-1.5 text-[13px] font-medium bg-[var(--crimson)] text-white hover:bg-[var(--crimson-hover)] rounded-[8px] transition-colors shadow-xs"
+                  >
+                    Sign up
+                  </Link>
                 </div>
               )}
             </div>
