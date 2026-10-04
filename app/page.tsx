@@ -105,13 +105,13 @@ export default async function HomePage() {
       {/* Schema.org Structured Data */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
 
       {/* Hero Section */}
       <HeroSearch />
 
-      {/* Section 1: Popular this week */}
+      {/* Section 1: Popular */}
       <section aria-labelledby="popular-heading" className="space-y-4">
         <div className="flex items-baseline justify-between border-b border-[var(--line)] pb-2">
           <h2
