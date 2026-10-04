@@ -272,6 +272,7 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         .select('slug, name, url, is_official')
         .limit(10);
 
+      if (popError) logDataError('repository', popError);
       if (popError || aliasError || tagsError || platError) {
         return {
           popularThisWeek: [],
@@ -543,6 +544,7 @@ export async function searchSeries(params: {
         p_page_size: clampedPageSize,
       });
 
+      if (error) logDataError('repository', error);
       if (error || !data || data.length === 0) {
         return {
           items: [],
@@ -831,6 +833,7 @@ export async function getSeriesById(idOrShortId: number | string): Promise<Serie
 
       const { data, error } = await query.single();
 
+      if (error) logDataError('repository', error);
       if (error || !data || data.visibility === 'removed') {
         return null;
       }
@@ -873,6 +876,7 @@ export async function getRelatedSeries(
         .neq('series_id', id)
         .limit(limit);
 
+      if (error) logDataError('repository', error);
       if (error || !data) return [];
       return data
         .map((d: any) => d.series)
@@ -926,6 +930,7 @@ export async function lookupLink(
 
       const rawSeries: any = (data as any)?.series;
       const seriesObj = Array.isArray(rawSeries) ? rawSeries[0] : rawSeries;
+      if (error) logDataError('repository', error);
       if (error || !data || !seriesObj || seriesObj.visibility === 'removed') {
         return null;
       }
@@ -983,6 +988,7 @@ export async function getTag(
         .eq('slug', slug)
         .single();
 
+      if (tagError) logDataError('repository', tagError);
       if (tagError || !tagData) return null;
 
       const { data: seriesData } = await supabasePublic
@@ -1027,6 +1033,7 @@ export async function getPlatform(
         .eq('slug', slug)
         .single();
 
+      if (platError) logDataError('repository', platError);
       if (platError || !platData) return null;
 
       const { data: releaseData } = await supabasePublic
@@ -1082,6 +1089,7 @@ export async function getPerson(
         .eq('id', id)
         .single();
 
+      if (error) logDataError('repository', error);
       if (error || !data) return null;
 
       const person: Person = {
@@ -1126,70 +1134,108 @@ export async function getSession(): Promise<User | null> {
 export async function getAllSeries(): Promise<Series[]> {
   if (isSupabaseConfigured) {
     try {
-      const { data, error } = await supabasePublic
-        .from('series')
-        .select('id, slug, title, updated_at, visibility, synopsis')
-        .eq('visibility', 'public');
+      const rows: any[] = [];
+      const batchSize = 1000;
+      const maxRows = 50000;
 
-      if (error || !data) return [];
+      for (let from = 0; from < maxRows; from += batchSize) {
+        const to = Math.min(from + batchSize - 1, maxRows - 1);
+        const { data, error } = await supabasePublic
+          .from('series')
+          .select('id, short_id, slug, title, updated_at, visibility, synopsis')
+          .eq('visibility', 'public')
+          .range(from, to);
 
-      return data.map((s: any) => ({
-        id: Number(s.id),
-        shortId: s.short_id || String(s.id),
-        slug: s.slug,
-        title: s.title,
-        originalLanguage: 'zh',
-        year: 2024,
-        episodeCount: 80,
-        synopsis: s.synopsis || '',
-        updatedAt: s.updated_at ? String(s.updated_at).split('T')[0] : '2024-01-01',
-        visibility: s.visibility,
-        ratingScore: 0,
-        ratingCount: 0,
-        tags: [],
-        aliases: [],
-        releases: [],
-        cast: [],
-      }));
-    } catch {
+        if (error) {
+          logDataError('getAllSeries: series query', error);
+          return [];
+        }
+        if (!data) return [];
+
+        rows.push(...data);
+        if (data.length < batchSize) break;
+      }
+
+      return rows.map((s: any) => {
+        if (!s.short_id) throw new Error('short_id missing in select');
+        return {
+          id: Number(s.id),
+          shortId: s.short_id,
+          slug: s.slug,
+          title: s.title,
+          originalLanguage: 'zh',
+          year: 2024,
+          episodeCount: 80,
+          synopsis: s.synopsis || '',
+          updatedAt: s.updated_at ? String(s.updated_at).split('T')[0] : '2024-01-01',
+          visibility: s.visibility,
+          ratingScore: 0,
+          ratingCount: 0,
+          tags: [],
+          aliases: [],
+          releases: [],
+          cast: [],
+        };
+      });
+    } catch (error) {
+      logDataError('getAllSeries', error);
       return [];
     }
   }
 
+  if (!allowMockData) return mockDataUnavailable('getAllSeries', []);
   return mockSeriesList.filter((s) => s.visibility === 'public');
 }
 
-/**
- * Gets all people for indexable credits and sitemaps (selecting only id, slug, name)
- */
 export async function getAllPeople(): Promise<Person[]> {
   if (isSupabaseConfigured) {
     try {
-      const { data, error } = await supabasePublic
-        .from('people')
-        .select('id, slug, name, native_name');
+      const rows: any[] = [];
+      const batchSize = 1000;
+      const maxRows = 50000;
 
-      if (error || !data) return [];
+      for (let from = 0; from < maxRows; from += batchSize) {
+        const to = Math.min(from + batchSize - 1, maxRows - 1);
+        const { data, error } = await supabasePublic
+          .from('people')
+          .select('id, short_id, slug, name, native_name')
+          .range(from, to);
 
-      return data.map((p: any) => ({
-        id: Number(p.id),
-        shortId: p.short_id || String(p.id),
-        slug: p.slug,
-        name: p.name,
-        nativeName: p.native_name,
-        role: 'actor',
-      }));
-    } catch {
+        if (error) {
+          logDataError('getAllPeople: people query', error);
+          return [];
+        }
+        if (!data) return [];
+
+        rows.push(...data);
+        if (data.length < batchSize) break;
+      }
+
+      return rows.map((p: any) => {
+        if (!p.short_id) throw new Error('short_id missing in select');
+        return {
+          id: Number(p.id),
+          shortId: p.short_id,
+          slug: p.slug,
+          name: p.name,
+          nativeName: p.native_name,
+          role: 'actor',
+        };
+      });
+    } catch (error) {
+      logDataError('getAllPeople', error);
       return [];
     }
   }
 
+  if (!allowMockData) return mockDataUnavailable('getAllPeople', []);
   return mockPeople.filter((p) =>
     mockSeriesList.some(
       (s) => s.visibility === 'public' && s.cast.some((c) => c.person.id === p.id)
     )
   );
 }
+
 
 /**
  * Gets all available platforms for search filter options
@@ -1201,6 +1247,7 @@ export async function getAllPlatforms(): Promise<Platform[]> {
         .from('platforms')
         .select('slug, name, url, is_official, icon');
 
+      if (error) logDataError('repository', error);
       if (error || !data) return [];
 
       return data.map((p: any) => ({
@@ -1227,6 +1274,7 @@ export async function getAllTags(): Promise<Tag[]> {
         .from('tags')
         .select('slug, name');
 
+      if (error) logDataError('repository', error);
       if (error || !data) return [];
 
       return data.map((t: any) => ({
@@ -1266,6 +1314,7 @@ export async function getUserProfileData(
         .eq('handle', clean)
         .single();
 
+      if (error) logDataError('repository', error);
       if (error || !profile) return null;
 
       const user: User = {
@@ -1290,6 +1339,8 @@ export async function getUserProfileData(
       return null;
     }
   }
+
+  if (!allowMockData) return mockDataUnavailable('getUserProfileData', null);
 
   const user = mockUsers.find(
     (u) =>
@@ -1350,6 +1401,7 @@ export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> 
         .eq('series_id', seriesId)
         .order('created_at', { ascending: false });
 
+      if (error) logDataError('repository', error);
       if (error || !data || data.length === 0) {
         return [];
       }
@@ -1407,6 +1459,7 @@ export async function getAllModerationReports(): Promise<UserReport[]> {
         .eq('status', 'open')
         .order('created_at', { ascending: false });
 
+      if (error) logDataError('repository', error);
       if (error || !data) return [];
 
       return data.map((r: any) => ({
@@ -1447,6 +1500,7 @@ export async function checkRedirect(fromIdOrShortId: number | string): Promise<n
       }
 
       const { data, error } = await query.single();
+      if (error) logDataError('repository', error);
       if (error || !data) return null;
       return Number(data.to_id);
     } catch {
@@ -1511,6 +1565,7 @@ export async function getPlatformBySlug(slug: string): Promise<{
         .eq('slug', slug)
         .single();
 
+      if (error) logDataError('repository', error);
       if (error || !data) return null;
 
       const platform: Platform = {
@@ -1574,6 +1629,7 @@ export async function getSeriesByPlatform(
         .eq('platform_slug', platformSlug)
         .range(from, to);
 
+      if (error) logDataError('repository', error);
       if (error || !data || count === null) {
         return {
           items: [],
@@ -1652,6 +1708,7 @@ export async function getTagBySlug(slug: string): Promise<{
         .eq('slug', slug)
         .single();
 
+      if (error) logDataError('repository', error);
       if (error || !data) return null;
 
       const tag: Tag = {
@@ -1710,6 +1767,7 @@ export async function getSeriesByTag(
         .eq('tag_slug', tagSlug)
         .range(from, to);
 
+      if (error) logDataError('repository', error);
       if (error || !data || count === null) {
         return {
           items: [],
@@ -1805,6 +1863,7 @@ export async function getPersonByIdOrSlug(
         .eq('short_id', shortId)
         .single();
 
+      if (error) logDataError('repository', error);
       if (error || !data) {
         return null;
       }
