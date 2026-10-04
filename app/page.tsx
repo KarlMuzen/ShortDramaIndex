@@ -118,7 +118,7 @@ export default async function HomePage() {
             id="popular-heading"
             className="text-[17px] sm:text-[18px] font-semibold text-[var(--ink)]"
           >
-            Popular this week
+            Popular
           </h2>
           <Link
             href="/search?sort=popularity"
