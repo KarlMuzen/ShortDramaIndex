@@ -1105,62 +1105,6 @@ export async function getPlatform(
 }
 
 /**
- * Gets person metadata and filmography
- */
-export async function getPerson(
-  id: number
-): Promise<{ person: Person; filmography: Series[] } | null> {
-
-  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getPerson', null);
-  if (isSupabaseConfigured) {
-    try {
-      const { data, error } = await supabasePublic
-        .from('people')
-        .select(`
-          id, short_id, slug, name, native_name,
-          series_people(
-            series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)
-          )
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error) logDataError('repository', error);
-      if (error || !data) return null;
-      if (!data.short_id) throw new Error('short_id missing in select');
-
-      const person: Person = {
-        id: Number(data.id),
-        shortId: data.short_id,
-        slug: data.slug,
-        name: data.name,
-        nativeName: data.native_name,
-        role: 'actor',
-      };
-
-      const filmography = (data.series_people || [])
-        .map((sp: any) => sp.series)
-        .filter((s: any) => s && s.visibility === 'public')
-        .map((s: any) => mapSeriesRecord(s));
-
-      return { person: { ...person, dramaCount: filmography.length }, filmography };
-    } catch (error) {
-      logDataError('repository', error);
-      return null;
-    }
-  }
-
-  const person = mockPeople.find((p) => p.id === id);
-  if (!person) return null;
-
-  const filmography = mockSeriesList.filter(
-    (s) => s.visibility === 'public' && s.cast.some((c) => c.person.id === id)
-  );
-
-  return { person: { ...person, dramaCount: filmography.length }, filmography };
-}
-
-/**
  * Resolves active session profile - in mock mode the session is always signed out (returns null)
  */
 export async function getSession(): Promise<User | null> {
