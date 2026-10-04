@@ -7,6 +7,8 @@ export const isSupabaseConfigured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
+export const allowMockData = !isSupabaseConfigured && process.env.VERCEL !== '1';
+
 export const supabasePublic = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false,
