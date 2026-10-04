@@ -29,11 +29,20 @@ import {
   mockRedirects,
   MOCK_NOW,
 } from './mock';
-import { supabasePublic, isSupabaseConfigured } from './supabase-public';
+import { supabasePublic, isSupabaseConfigured, allowMockData } from './supabase-public';
 import { parseTitleParam, parsePersonParam } from '@/src/lib/urls';
 import { getLanguageName } from '@/src/lib/languages';
 
 export { getLanguageName };
+
+export function logDataError(context: string, error: unknown): void {
+  console.error(context, error);
+}
+
+function mockDataUnavailable<T>(context: string, emptyResult: T): T {
+  logDataError(context, new Error('Supabase is not configured and mock data is not allowed'));
+  return emptyResult;
+}
 
 /**
  * Normalizes string for multilingual substring search
@@ -99,6 +108,7 @@ function isValidUrl(str: string): boolean {
 export interface RecentAliasEntry {
   alias: Alias;
   seriesId: number;
+  seriesShortId: string;
   seriesSlug: string;
   seriesTitle: string;
   addedAt: string;
@@ -109,7 +119,7 @@ export interface BrowseLanguage {
   code: string;
   label: string;
   nativeLabel: string;
-  count: number;
+  count?: number;
 }
 
 export interface HomeFeedData {
@@ -149,6 +159,8 @@ function getRelativeTimeString(dateStr: string): string {
  * Maps database series record to standard Series interface
  */
 function mapSeriesRecord(row: any): Series {
+  if (!row.short_id) throw new Error('short_id missing in select');
+
   const aliases: Alias[] = Array.isArray(row.aliases)
     ? row.aliases.map((a: any) => ({
         id: a.id,
@@ -156,7 +168,8 @@ function mapSeriesRecord(row: any): Series {
         language: a.language,
         script: a.script,
         source: a.source_label || a.source_url || 'Community',
-        status: a.status || 'verified',
+        sourceUrl: a.source_url || undefined,
+        status: a.status || 'pending',
         addedBy: a.added_by || 'Editor',
         addedAt: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
       }))
@@ -173,7 +186,7 @@ function mapSeriesRecord(row: any): Series {
         episodeCount: r.episode_count,
         releasedYear: r.released_year,
         url: r.url,
-        lastChecked: 'Today',
+        lastChecked: r.last_checked ? String(r.last_checked).split('T')[0] : '',
         linkStatus: r.link_status || 'active',
         isOfficial: Boolean(r.is_official),
       }))
@@ -190,7 +203,10 @@ function mapSeriesRecord(row: any): Series {
     ? row.series_people.map((sp: any) => ({
         person: {
           id: Number(sp.people?.id || sp.person_id),
-          shortId: sp.people?.short_id || String(sp.people?.id || sp.person_id),
+          shortId: (() => {
+            if (!sp.people?.short_id) throw new Error('short_id missing in select');
+            return sp.people.short_id;
+          })(),
           slug: sp.people?.slug || '',
           name: sp.people?.name || '',
           nativeName: sp.people?.native_name,
@@ -203,7 +219,7 @@ function mapSeriesRecord(row: any): Series {
 
   return {
     id: Number(row.id),
-    shortId: row.short_id || String(row.id),
+    shortId: row.short_id,
     slug: row.slug,
     title: row.title,
     romanizedTitle: row.romanized_title || undefined,
