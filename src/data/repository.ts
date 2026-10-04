@@ -942,13 +942,13 @@ export async function lookupLink(
         .select(`
           id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, platforms(name),
           series:series_id(
-            id, slug, title, romanized_title, original_language, origin_country,
+            id, short_id, slug, title, romanized_title, original_language, origin_country,
             year, episode_count, avg_episode_minutes, synopsis, poster_url,
             production_status, visibility, rating_score, rating_count, list_count, updated_at,
             aliases(id, text, language, script, source_url, source_label, status, added_by, added_at),
             releases(id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, platforms(name)),
             series_tags(tag_slug, tags(slug, name)),
-            series_people(role_type, character_name, people(id, slug, name, native_name))
+            series_people(role_type, character_name, people(id, short_id, slug, name, native_name))
           )
         `)
         .ilike('url', `%${cleanUrl}%`)
