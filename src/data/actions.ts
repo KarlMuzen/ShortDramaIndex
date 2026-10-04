@@ -125,9 +125,22 @@ export interface SubmitReportResult {
   message?: string;
 }
 
+type ReportDataKey =
+  | 'name'
+  | 'targetAlias'
+  | 'reason'
+  | 'otherSeriesTitle'
+  | 'field'
+  | 'releasePlatform'
+  | 'language'
+  | 'url'
+  | 'replacementUrl'
+  | 'note'
+  | 'proposedValue';
+
 function trimmedReportData(input: SubmitReportInput['data']): SubmitReportInput['data'] {
-  const result: SubmitReportInput['data'] = {};
-  const add = (key: keyof SubmitReportInput['data'], value: string | undefined, max: number) => {
+  const result: Partial<Record<ReportDataKey, string>> = {};
+  const add = (key: ReportDataKey, value: string | undefined, max: number) => {
     if (value !== undefined) result[key] = value.trim().slice(0, max);
   };
 
