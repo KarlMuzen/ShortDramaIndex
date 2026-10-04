@@ -1118,7 +1118,7 @@ export async function getPerson(
         .select(`
           id, slug, name, native_name,
           series_people(
-            series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)
+            series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)
           )
         `)
         .eq('id', id)
@@ -1686,7 +1686,7 @@ export async function getSeriesByPlatform(
 
       const { data, count, error } = await supabasePublic
         .from('releases')
-        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)', { count: 'exact' })
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)', { count: 'exact' })
         .eq('platform_slug', platformSlug)
         .range(from, to);
 
@@ -1832,7 +1832,7 @@ export async function getSeriesByTag(
 
       const { data, count, error } = await supabasePublic
         .from('series_tags')
-        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)', { count: 'exact' })
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)', { count: 'exact' })
         .eq('tag_slug', tagSlug)
         .range(from, to);
 
