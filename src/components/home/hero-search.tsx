@@ -24,6 +24,7 @@ export function HeroSearch() {
     series?: {
       id: number;
       slug: string;
+      shortId: string;
       title: string;
       year: number;
       episodeCount: number;
