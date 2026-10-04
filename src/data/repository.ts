@@ -247,6 +247,12 @@ function mapSeriesRecord(row: any): Series {
  * Retrieves the comprehensive datasets required for the Home page
  */
 export async function getHomePageFeed(): Promise<HomeFeedData> {
+
+  if (!isSupabaseConfigured && !allowMockData) {
+    return mockDataUnavailable('getHomePageFeed', {
+      popularThisWeek: [], recentlyAddedAliases: [], browseTags: [], browsePlatforms: [], browseLanguages: [],
+    });
+  }
   if (isSupabaseConfigured) {
     try {
       const { data: popularData, error: popError } = await supabasePublic
@@ -415,6 +421,7 @@ export async function searchSeries(params: {
   page?: number;
   pageSize?: number;
 }): Promise<SearchResult> {
+
   const {
     query = '',
     filters = {},
@@ -440,6 +447,12 @@ export async function searchSeries(params: {
   }
 
   const q = normalizeForSearch(rawQ);
+
+  if (!isSupabaseConfigured && !allowMockData) {
+    return mockDataUnavailable('searchSeries', {
+      items: [], total: 0, page: safePage, pageSize: clampedPageSize, totalPages: 0, isUrlSearch: false,
+    });
+  }
 
   // Check if query is a URL
   if (q && isPotentialUrl(q)) {
@@ -808,8 +821,11 @@ export async function searchSeries(params: {
  * Gets a single series by numeric ID or 5-char shortId
  */
 export async function getSeriesById(idOrShortId: number | string): Promise<Series | null> {
+
   const isNumeric = typeof idOrShortId === 'number' || /^\d+$/.test(String(idOrShortId));
   const shortId = typeof idOrShortId === 'string' ? parseTitleParam(idOrShortId) || idOrShortId : null;
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getSeriesById', null);
 
   if (isSupabaseConfigured) {
     try {
@@ -861,6 +877,8 @@ export async function getRelatedSeries(
   id: number,
   limit: number = 4
 ): Promise<Series[]> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getRelatedSeries', []);
   const current = await getSeriesById(id);
   if (!current) return [];
 
@@ -906,6 +924,8 @@ export async function getRelatedSeries(
 export async function lookupLink(
   url: string
 ): Promise<{ series: Series; release: Release } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('lookupLink', null);
   const cleanUrl = url.trim().toLowerCase();
 
   if (isSupabaseConfigured) {
@@ -980,6 +1000,8 @@ export async function lookupLink(
 export async function getTag(
   slug: string
 ): Promise<{ tag: Tag; series: Series[] } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getTag', null);
   if (isSupabaseConfigured) {
     try {
       const { data: tagData, error: tagError } = await supabasePublic
@@ -1025,6 +1047,8 @@ export async function getTag(
 export async function getPlatform(
   slug: string
 ): Promise<{ platform: Platform; series: Series[] } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getPlatform', null);
   if (isSupabaseConfigured) {
     try {
       const { data: platData, error: platError } = await supabasePublic
@@ -1076,6 +1100,8 @@ export async function getPlatform(
 export async function getPerson(
   id: number
 ): Promise<{ person: Person; filmography: Series[] } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getPerson', null);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
@@ -1241,6 +1267,8 @@ export async function getAllPeople(): Promise<Person[]> {
  * Gets all available platforms for search filter options
  */
 export async function getAllPlatforms(): Promise<Platform[]> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getAllPlatforms', []);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
@@ -1268,6 +1296,8 @@ export async function getAllPlatforms(): Promise<Platform[]> {
  * Gets all available tags for search filter options
  */
 export async function getAllTags(): Promise<Tag[]> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getAllTags', []);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
@@ -1292,6 +1322,8 @@ export async function getAllTags(): Promise<Tag[]> {
  * Gets all reports submitted by the current user
  */
 export async function getUserReports(): Promise<UserReport[]> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getUserReports', []);
   if (isSupabaseConfigured) {
     return [];
   }
@@ -1393,6 +1425,8 @@ export async function getUserPreferences(): Promise<UserPreferences> {
  * Gets revision history for a series
  */
 export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getSeriesRevisions', []);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
@@ -1451,6 +1485,8 @@ export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> 
  * Gets all pending/open moderation reports for the mod queue
  */
 export async function getAllModerationReports(): Promise<UserReport[]> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getAllModerationReports', []);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
@@ -1490,6 +1526,8 @@ export async function getAllModerationReports(): Promise<UserReport[]> {
  * Checks if a title ID or shortId has been merged/redirected
  */
 export async function checkRedirect(fromIdOrShortId: number | string): Promise<number | string | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('checkRedirect', null);
   const isNumeric = typeof fromIdOrShortId === 'number' || /^\d+$/.test(String(fromIdOrShortId));
 
   if (isSupabaseConfigured) {
@@ -1557,6 +1595,8 @@ export async function getPlatformBySlug(slug: string): Promise<{
   platform: Platform;
   description: string;
 } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getPlatformBySlug', null);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
@@ -1615,6 +1655,10 @@ export async function getSeriesByPlatform(
   pageSize: number;
   totalPages: number;
 }> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getSeriesByPlatform', {
+    items: [], total: 0, page: Math.max(1, page), pageSize: Math.max(1, Math.min(24, pageSize)), totalPages: 0,
+  });
   const clampedPageSize = Math.max(1, Math.min(24, pageSize));
   const safePage = Math.max(1, page);
 
@@ -1700,6 +1744,8 @@ export async function getTagBySlug(slug: string): Promise<{
   tag: Tag;
   description: string;
 } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getTagBySlug', null);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
@@ -1753,6 +1799,10 @@ export async function getSeriesByTag(
   pageSize: number;
   totalPages: number;
 }> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getSeriesByTag', {
+    items: [], total: 0, page: Math.max(1, page), pageSize: Math.max(1, Math.min(24, pageSize)), totalPages: 0,
+  });
   const clampedPageSize = Math.max(1, Math.min(24, pageSize));
   const safePage = Math.max(1, page);
 
@@ -1846,6 +1896,8 @@ export async function getPersonByIdOrSlug(
   person: Person;
   credits: PersonCredit[];
 } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getPersonByIdOrSlug', null);
   const shortId = parsePersonParam(idOrSlug);
   if (!shortId) return null;
 
