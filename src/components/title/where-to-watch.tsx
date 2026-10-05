@@ -93,12 +93,16 @@ export function WhereToWatch({ series }: WhereToWatchProps) {
           {/* Region as plain text + Last checked */}
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-[var(--muted)] tabular-nums">
             <span>Region: {release.region}</span>
-            <span>•</span>
-            <span>Last checked {release.lastChecked}</span>
-            {isOutdated && (
-              <span className="text-[var(--status-pending)] font-medium">
-                (may be out of date)
-              </span>
+            {release.lastChecked && (
+              <>
+                <span>•</span>
+                <span>Last checked {release.lastChecked}</span>
+                {isOutdated && (
+                  <span className="text-[var(--status-pending)] font-medium">
+                    (may be out of date)
+                  </span>
+                )}
+              </>
             )}
           </div>
         </div>

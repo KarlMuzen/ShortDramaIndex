@@ -29,11 +29,20 @@ import {
   mockRedirects,
   MOCK_NOW,
 } from './mock';
-import { supabasePublic, isSupabaseConfigured } from './supabase-public';
+import { supabasePublic, isSupabaseConfigured, allowMockData } from './supabase-public';
 import { parseTitleParam, parsePersonParam } from '@/src/lib/urls';
 import { getLanguageName } from '@/src/lib/languages';
 
 export { getLanguageName };
+
+export function logDataError(context: string, error: unknown): void {
+  console.error(context, error);
+}
+
+function mockDataUnavailable<T>(context: string, emptyResult: T): T {
+  logDataError(context, new Error('Supabase is not configured and mock data is not allowed'));
+  return emptyResult;
+}
 
 /**
  * Normalizes string for multilingual substring search
@@ -91,7 +100,8 @@ function isValidUrl(str: string): boolean {
     const formatted = str.startsWith('http') ? str : `https://${str}`;
     new URL(formatted);
     return true;
-  } catch {
+  } catch (error) {
+      logDataError('repository', error);
     return false;
   }
 }
@@ -99,6 +109,7 @@ function isValidUrl(str: string): boolean {
 export interface RecentAliasEntry {
   alias: Alias;
   seriesId: number;
+  seriesShortId: string;
   seriesSlug: string;
   seriesTitle: string;
   addedAt: string;
@@ -109,7 +120,7 @@ export interface BrowseLanguage {
   code: string;
   label: string;
   nativeLabel: string;
-  count: number;
+  count?: number;
 }
 
 export interface HomeFeedData {
@@ -140,7 +151,8 @@ function getRelativeTimeString(dateStr: string): string {
     if (diffWeeks < 5) return `${diffWeeks}w ago`;
     const diffMonths = Math.round(diffDays / 30);
     return `${diffMonths}mo ago`;
-  } catch {
+  } catch (error) {
+      logDataError('repository', error);
     return 'recently';
   }
 }
@@ -149,6 +161,8 @@ function getRelativeTimeString(dateStr: string): string {
  * Maps database series record to standard Series interface
  */
 function mapSeriesRecord(row: any): Series {
+  if (!row.short_id) throw new Error('short_id missing in select');
+
   const aliases: Alias[] = Array.isArray(row.aliases)
     ? row.aliases.map((a: any) => ({
         id: a.id,
@@ -156,7 +170,8 @@ function mapSeriesRecord(row: any): Series {
         language: a.language,
         script: a.script,
         source: a.source_label || a.source_url || 'Community',
-        status: a.status || 'verified',
+        sourceUrl: a.source_url || undefined,
+        status: a.status || 'pending',
         addedBy: a.added_by || 'Editor',
         addedAt: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
       }))
@@ -173,7 +188,7 @@ function mapSeriesRecord(row: any): Series {
         episodeCount: r.episode_count,
         releasedYear: r.released_year,
         url: r.url,
-        lastChecked: 'Today',
+        lastChecked: r.last_checked ? String(r.last_checked).split('T')[0] : '',
         linkStatus: r.link_status || 'active',
         isOfficial: Boolean(r.is_official),
       }))
@@ -190,7 +205,10 @@ function mapSeriesRecord(row: any): Series {
     ? row.series_people.map((sp: any) => ({
         person: {
           id: Number(sp.people?.id || sp.person_id),
-          shortId: sp.people?.short_id || String(sp.people?.id || sp.person_id),
+          shortId: (() => {
+            if (!sp.people?.short_id) throw new Error('short_id missing in select');
+            return sp.people.short_id;
+          })(),
           slug: sp.people?.slug || '',
           name: sp.people?.name || '',
           nativeName: sp.people?.native_name,
@@ -203,7 +221,7 @@ function mapSeriesRecord(row: any): Series {
 
   return {
     id: Number(row.id),
-    shortId: row.short_id || String(row.id),
+    shortId: row.short_id,
     slug: row.slug,
     title: row.title,
     romanizedTitle: row.romanized_title || undefined,
@@ -231,18 +249,24 @@ function mapSeriesRecord(row: any): Series {
  * Retrieves the comprehensive datasets required for the Home page
  */
 export async function getHomePageFeed(): Promise<HomeFeedData> {
+
+  if (!isSupabaseConfigured && !allowMockData) {
+    return mockDataUnavailable('getHomePageFeed', {
+      popularThisWeek: [], recentlyAddedAliases: [], browseTags: [], browsePlatforms: [], browseLanguages: [],
+    });
+  }
   if (isSupabaseConfigured) {
     try {
       const { data: popularData, error: popError } = await supabasePublic
         .from('series')
-        .select('id, slug, title, year, episode_count, visibility, list_count, rating_count')
+        .select('id, short_id, slug, title, year, episode_count, visibility, list_count, rating_count')
         .eq('visibility', 'public')
         .order('list_count', { ascending: false })
         .limit(6);
 
       const { data: aliasData, error: aliasError } = await supabasePublic
         .from('aliases')
-        .select('text, language, source_url, source_label, added_at, series:series_id(id, slug, title, visibility)')
+        .select('text, language, source_url, source_label, status, added_at, series:series_id(id, short_id, slug, title, visibility)')
         .order('added_at', { ascending: false })
         .limit(7);
 
@@ -256,6 +280,10 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         .select('slug, name, url, is_official')
         .limit(10);
 
+      if (popError) logDataError('getHomePageFeed: popular series query', popError);
+      if (aliasError) logDataError('getHomePageFeed: aliases query', aliasError);
+      if (tagsError) logDataError('getHomePageFeed: tags query', tagsError);
+      if (platError) logDataError('getHomePageFeed: platforms query', platError);
       if (popError || aliasError || tagsError || platError) {
         return {
           popularThisWeek: [],
@@ -266,9 +294,11 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         };
       }
 
-      const popularThisWeek: Series[] = (popularData || []).map((p: any) => ({
-        id: Number(p.id),
-        shortId: p.short_id || String(p.id),
+      const popularThisWeek: Series[] = (popularData || []).map((p: any) => {
+        if (!p.short_id) throw new Error('short_id missing in select');
+        return {
+          id: Number(p.id),
+          shortId: p.short_id,
         slug: p.slug,
         title: p.title,
         originalLanguage: 'zh',
@@ -282,8 +312,9 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         tags: [],
         aliases: [],
         releases: [],
-        cast: [],
-      }));
+          cast: [],
+        };
+      });
 
       const recentlyAddedAliases: RecentAliasEntry[] = (aliasData || [])
         .filter((a: any) => a.series && a.series.visibility === 'public')
@@ -292,11 +323,16 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
             text: a.text,
             language: a.language,
             source: a.source_label || a.source_url || 'Community',
-            status: 'verified',
+            sourceUrl: a.source_url || undefined,
+            status: a.status || 'pending',
             addedBy: 'Contributor',
             addedAt: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
           },
           seriesId: Number(a.series.id),
+          seriesShortId: (() => {
+            if (!a.series.short_id) throw new Error('short_id missing in select');
+            return a.series.short_id;
+          })(),
           seriesSlug: a.series.slug,
           seriesTitle: a.series.title,
           addedAt: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
@@ -304,11 +340,11 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         }));
 
       const browseLanguages: BrowseLanguage[] = [
-        { code: 'zh', label: 'Chinese', nativeLabel: '中文', count: 0 },
-        { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: 0 },
-        { code: 'en', label: 'English', nativeLabel: 'English', count: 0 },
-        { code: 'es', label: 'Spanish', nativeLabel: 'Español', count: 0 },
-        { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: 0 },
+        { code: 'zh', label: 'Chinese', nativeLabel: '中文' },
+        { code: 'ko', label: 'Korean', nativeLabel: '한국어' },
+        { code: 'en', label: 'English', nativeLabel: 'English' },
+        { code: 'es', label: 'Spanish', nativeLabel: 'Español' },
+        { code: 'ja', label: 'Japanese', nativeLabel: '日本語' },
       ];
 
       return {
@@ -318,7 +354,8 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         browsePlatforms: (platformsData || []) as Platform[],
         browseLanguages,
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return {
         popularThisWeek: [],
         recentlyAddedAliases: [],
@@ -342,6 +379,7 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
       allAliases.push({
         alias,
         seriesId: series.id,
+        seriesShortId: series.shortId,
         seriesSlug: series.slug,
         seriesTitle: series.title,
         addedAt: alias.addedAt,
@@ -363,11 +401,11 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
   }
 
   const browseLanguages: BrowseLanguage[] = [
-    { code: 'zh', label: 'Chinese', nativeLabel: '中文', count: languageCounts['zh'] || 0 },
-    { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: languageCounts['ko'] || 0 },
-    { code: 'en', label: 'English', nativeLabel: 'English', count: languageCounts['en'] || 0 },
-    { code: 'es', label: 'Spanish', nativeLabel: 'Español', count: languageCounts['es'] || 0 },
-    { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: languageCounts['ja'] || 0 },
+    { code: 'zh', label: 'Chinese', nativeLabel: '中文', count: languageCounts['zh'] || undefined },
+    { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: languageCounts['ko'] || undefined },
+    { code: 'en', label: 'English', nativeLabel: 'English', count: languageCounts['en'] || undefined },
+    { code: 'es', label: 'Spanish', nativeLabel: 'Español', count: languageCounts['es'] || undefined },
+    { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: languageCounts['ja'] || undefined },
   ];
 
   return {
@@ -390,6 +428,7 @@ export async function searchSeries(params: {
   page?: number;
   pageSize?: number;
 }): Promise<SearchResult> {
+
   const {
     query = '',
     filters = {},
@@ -415,6 +454,12 @@ export async function searchSeries(params: {
   }
 
   const q = normalizeForSearch(rawQ);
+
+  if (!isSupabaseConfigured && !allowMockData) {
+    return mockDataUnavailable('searchSeries', {
+      items: [], total: 0, page: safePage, pageSize: clampedPageSize, totalPages: 0, isUrlSearch: false,
+    });
+  }
 
   // Check if query is a URL
   if (q && isPotentialUrl(q)) {
@@ -519,6 +564,7 @@ export async function searchSeries(params: {
         p_page_size: clampedPageSize,
       });
 
+      if (error) logDataError('repository', error);
       if (error || !data || data.length === 0) {
         return {
           items: [],
@@ -534,6 +580,10 @@ export async function searchSeries(params: {
       const items: SearchResultItem[] = data.map((row: any) => {
         const series: Series = {
           id: Number(row.id),
+          shortId: (() => {
+            if (!row.short_id) throw new Error('short_id missing in select');
+            return row.short_id;
+          })(),
           slug: row.slug,
           title: row.title,
           romanizedTitle: row.romanized_title || undefined,
@@ -553,8 +603,9 @@ export async function searchSeries(params: {
                 {
                   text: row.matched_alias_text,
                   language: row.matched_alias_language || 'zh',
-                  source: 'Verified',
-                  status: 'verified',
+                  source: row.matched_alias_source_url || 'Community',
+                  sourceUrl: row.matched_alias_source_url || undefined,
+                  status: row.matched_alias_status || 'pending',
                   addedBy: 'Editor',
                   addedAt: '2024-01-01',
                 },
@@ -569,8 +620,9 @@ export async function searchSeries(params: {
               alias: {
                 text: row.matched_alias_text,
                 language: row.matched_alias_language || 'zh',
-                source: 'Verified',
-                status: 'verified',
+                source: row.matched_alias_source_url || 'Community',
+                sourceUrl: row.matched_alias_source_url || undefined,
+                status: row.matched_alias_status || 'pending',
                 addedBy: 'Editor',
                 addedAt: '2024-01-01',
               },
@@ -594,7 +646,8 @@ export async function searchSeries(params: {
         totalPages: Math.max(1, Math.ceil(total / clampedPageSize)),
         isUrlSearch: false,
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return {
         items: [],
         total: 0,
@@ -776,8 +829,11 @@ export async function searchSeries(params: {
  * Gets a single series by numeric ID or 5-char shortId
  */
 export async function getSeriesById(idOrShortId: number | string): Promise<Series | null> {
+
   const isNumeric = typeof idOrShortId === 'number' || /^\d+$/.test(String(idOrShortId));
   const shortId = typeof idOrShortId === 'string' ? parseTitleParam(idOrShortId) || idOrShortId : null;
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getSeriesById', null);
 
   if (isSupabaseConfigured) {
     try {
@@ -801,11 +857,13 @@ export async function getSeriesById(idOrShortId: number | string): Promise<Serie
 
       const { data, error } = await query.single();
 
+      if (error) logDataError('repository', error);
       if (error || !data || data.visibility === 'removed') {
         return null;
       }
       return mapSeriesRecord(data);
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -828,6 +886,8 @@ export async function getRelatedSeries(
   id: number,
   limit: number = 4
 ): Promise<Series[]> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getRelatedSeries', []);
   const current = await getSeriesById(id);
   if (!current) return [];
 
@@ -838,17 +898,19 @@ export async function getRelatedSeries(
 
       const { data, error } = await supabasePublic
         .from('series_tags')
-        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
         .in('tag_slug', tagSlugs)
         .neq('series_id', id)
         .limit(limit);
 
+      if (error) logDataError('repository', error);
       if (error || !data) return [];
       return data
         .map((d: any) => d.series)
         .filter((s: any) => s && s.visibility === 'public')
         .map((s: any) => mapSeriesRecord(s));
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return [];
     }
   }
@@ -872,6 +934,8 @@ export async function getRelatedSeries(
 export async function lookupLink(
   url: string
 ): Promise<{ series: Series; release: Release } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('lookupLink', null);
   const cleanUrl = url.trim().toLowerCase();
 
   if (isSupabaseConfigured) {
@@ -881,13 +945,13 @@ export async function lookupLink(
         .select(`
           id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, platforms(name),
           series:series_id(
-            id, slug, title, romanized_title, original_language, origin_country,
+            id, short_id, slug, title, romanized_title, original_language, origin_country,
             year, episode_count, avg_episode_minutes, synopsis, poster_url,
             production_status, visibility, rating_score, rating_count, list_count, updated_at,
             aliases(id, text, language, script, source_url, source_label, status, added_by, added_at),
             releases(id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, platforms(name)),
             series_tags(tag_slug, tags(slug, name)),
-            series_people(role_type, character_name, people(id, slug, name, native_name))
+            series_people(role_type, character_name, people(id, short_id, slug, name, native_name))
           )
         `)
         .ilike('url', `%${cleanUrl}%`)
@@ -896,6 +960,7 @@ export async function lookupLink(
 
       const rawSeries: any = (data as any)?.series;
       const seriesObj = Array.isArray(rawSeries) ? rawSeries[0] : rawSeries;
+      if (error) logDataError('repository', error);
       if (error || !data || !seriesObj || seriesObj.visibility === 'removed') {
         return null;
       }
@@ -912,13 +977,14 @@ export async function lookupLink(
         episodeCount: releaseData.episode_count,
         releasedYear: releaseData.released_year,
         url: releaseData.url,
-        lastChecked: 'Today',
+        lastChecked: releaseData.last_checked ? String(releaseData.last_checked).split('T')[0] : '',
         linkStatus: releaseData.link_status || 'active',
         isOfficial: Boolean(releaseData.is_official),
       };
 
       return { series, release };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -945,6 +1011,8 @@ export async function lookupLink(
 export async function getTag(
   slug: string
 ): Promise<{ tag: Tag; series: Series[] } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getTag', null);
   if (isSupabaseConfigured) {
     try {
       const { data: tagData, error: tagError } = await supabasePublic
@@ -953,11 +1021,12 @@ export async function getTag(
         .eq('slug', slug)
         .single();
 
+      if (tagError) logDataError('repository', tagError);
       if (tagError || !tagData) return null;
 
       const { data: seriesData } = await supabasePublic
         .from('series_tags')
-        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
         .eq('tag_slug', slug);
 
       const series = (seriesData || [])
@@ -969,7 +1038,8 @@ export async function getTag(
         tag: { slug: tagData.slug, name: tagData.name, count: series.length },
         series,
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -989,6 +1059,8 @@ export async function getTag(
 export async function getPlatform(
   slug: string
 ): Promise<{ platform: Platform; series: Series[] } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getPlatform', null);
   if (isSupabaseConfigured) {
     try {
       const { data: platData, error: platError } = await supabasePublic
@@ -997,11 +1069,12 @@ export async function getPlatform(
         .eq('slug', slug)
         .single();
 
+      if (platError) logDataError('repository', platError);
       if (platError || !platData) return null;
 
       const { data: releaseData } = await supabasePublic
         .from('releases')
-        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
         .eq('platform_slug', slug);
 
       const series = (releaseData || [])
@@ -1019,7 +1092,8 @@ export async function getPlatform(
         },
         series,
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -1031,56 +1105,6 @@ export async function getPlatform(
     (s) => s.visibility === 'public' && s.releases.some((r) => r.platformSlug === slug)
   );
   return { platform, series };
-}
-
-/**
- * Gets person metadata and filmography
- */
-export async function getPerson(
-  id: number
-): Promise<{ person: Person; filmography: Series[] } | null> {
-  if (isSupabaseConfigured) {
-    try {
-      const { data, error } = await supabasePublic
-        .from('people')
-        .select(`
-          id, slug, name, native_name,
-          series_people(
-            series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)
-          )
-        `)
-        .eq('id', id)
-        .single();
-
-      if (error || !data) return null;
-
-      const person: Person = {
-        id: Number(data.id),
-        slug: data.slug,
-        name: data.name,
-        nativeName: data.native_name,
-        role: 'actor',
-      };
-
-      const filmography = (data.series_people || [])
-        .map((sp: any) => sp.series)
-        .filter((s: any) => s && s.visibility === 'public')
-        .map((s: any) => mapSeriesRecord(s));
-
-      return { person: { ...person, dramaCount: filmography.length }, filmography };
-    } catch {
-      return null;
-    }
-  }
-
-  const person = mockPeople.find((p) => p.id === id);
-  if (!person) return null;
-
-  const filmography = mockSeriesList.filter(
-    (s) => s.visibility === 'public' && s.cast.some((c) => c.person.id === id)
-  );
-
-  return { person: { ...person, dramaCount: filmography.length }, filmography };
 }
 
 /**
@@ -1096,64 +1120,101 @@ export async function getSession(): Promise<User | null> {
 export async function getAllSeries(): Promise<Series[]> {
   if (isSupabaseConfigured) {
     try {
-      const { data, error } = await supabasePublic
-        .from('series')
-        .select('id, slug, title, updated_at, visibility, synopsis')
-        .eq('visibility', 'public');
+      const rows: any[] = [];
+      const batchSize = 1000;
+      const maxRows = 50000;
 
-      if (error || !data) return [];
+      for (let from = 0; from < maxRows; from += batchSize) {
+        const to = Math.min(from + batchSize - 1, maxRows - 1);
+        const { data, error } = await supabasePublic
+          .from('series')
+          .select('id, short_id, slug, title, updated_at, visibility, synopsis')
+          .eq('visibility', 'public')
+          .range(from, to);
 
-      return data.map((s: any) => ({
-        id: Number(s.id),
-        shortId: s.short_id || String(s.id),
-        slug: s.slug,
-        title: s.title,
-        originalLanguage: 'zh',
-        year: 2024,
-        episodeCount: 80,
-        synopsis: s.synopsis || '',
-        updatedAt: s.updated_at ? String(s.updated_at).split('T')[0] : '2024-01-01',
-        visibility: s.visibility,
-        ratingScore: 0,
-        ratingCount: 0,
-        tags: [],
-        aliases: [],
-        releases: [],
-        cast: [],
-      }));
-    } catch {
+        if (error) {
+          logDataError('getAllSeries: series query', error);
+          return [];
+        }
+        if (!data) return [];
+
+        rows.push(...data);
+        if (data.length < batchSize) break;
+      }
+
+      return rows.map((s: any) => {
+        if (!s.short_id) throw new Error('short_id missing in select');
+        return {
+          id: Number(s.id),
+          shortId: s.short_id,
+          slug: s.slug,
+          title: s.title,
+          originalLanguage: 'zh',
+          year: 2024,
+          episodeCount: 80,
+          synopsis: s.synopsis || '',
+          updatedAt: s.updated_at ? String(s.updated_at).split('T')[0] : '2024-01-01',
+          visibility: s.visibility,
+          ratingScore: 0,
+          ratingCount: 0,
+          tags: [],
+          aliases: [],
+          releases: [],
+          cast: [],
+        };
+      });
+    } catch (error) {
+      logDataError('getAllSeries', error);
       return [];
     }
   }
 
+  if (!allowMockData) return mockDataUnavailable('getAllSeries', []);
   return mockSeriesList.filter((s) => s.visibility === 'public');
 }
 
-/**
- * Gets all people for indexable credits and sitemaps (selecting only id, slug, name)
- */
 export async function getAllPeople(): Promise<Person[]> {
   if (isSupabaseConfigured) {
     try {
-      const { data, error } = await supabasePublic
-        .from('people')
-        .select('id, slug, name, native_name');
+      const rows: any[] = [];
+      const batchSize = 1000;
+      const maxRows = 50000;
 
-      if (error || !data) return [];
+      for (let from = 0; from < maxRows; from += batchSize) {
+        const to = Math.min(from + batchSize - 1, maxRows - 1);
+        const { data, error } = await supabasePublic
+          .from('people')
+          .select('id, short_id, slug, name, native_name')
+          .range(from, to);
 
-      return data.map((p: any) => ({
-        id: Number(p.id),
-        shortId: p.short_id || String(p.id),
-        slug: p.slug,
-        name: p.name,
-        nativeName: p.native_name,
-        role: 'actor',
-      }));
-    } catch {
+        if (error) {
+          logDataError('getAllPeople: people query', error);
+          return [];
+        }
+        if (!data) return [];
+
+        rows.push(...data);
+        if (data.length < batchSize) break;
+      }
+
+      return rows.map((p: any) => {
+        if (!p.short_id) throw new Error('short_id missing in select');
+        return {
+          id: Number(p.id),
+          shortId: p.short_id,
+          slug: p.slug,
+          name: p.name,
+          nativeName: p.native_name,
+          role: 'actor',
+        };
+      });
+    } catch (error) {
+      logDataError('getAllPeople', error);
       return [];
     }
   }
 
+  if (!allowMockData) return mockDataUnavailable('getAllPeople', []);
   return mockPeople.filter((p) =>
     mockSeriesList.some(
       (s) => s.visibility === 'public' && s.cast.some((c) => c.person.id === p.id)
@@ -1161,16 +1222,20 @@ export async function getAllPeople(): Promise<Person[]> {
   );
 }
 
+
 /**
  * Gets all available platforms for search filter options
  */
 export async function getAllPlatforms(): Promise<Platform[]> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getAllPlatforms', []);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
         .from('platforms')
         .select('slug, name, url, is_official, icon');
 
+      if (error) logDataError('repository', error);
       if (error || !data) return [];
 
       return data.map((p: any) => ({
@@ -1180,7 +1245,8 @@ export async function getAllPlatforms(): Promise<Platform[]> {
         official: p.is_official,
         icon: p.icon,
       }));
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return [];
     }
   }
@@ -1191,19 +1257,23 @@ export async function getAllPlatforms(): Promise<Platform[]> {
  * Gets all available tags for search filter options
  */
 export async function getAllTags(): Promise<Tag[]> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getAllTags', []);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
         .from('tags')
         .select('slug, name');
 
+      if (error) logDataError('repository', error);
       if (error || !data) return [];
 
       return data.map((t: any) => ({
         slug: t.slug,
         name: t.name,
       }));
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return [];
     }
   }
@@ -1214,6 +1284,8 @@ export async function getAllTags(): Promise<Tag[]> {
  * Gets all reports submitted by the current user
  */
 export async function getUserReports(): Promise<UserReport[]> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getUserReports', []);
   if (isSupabaseConfigured) {
     return [];
   }
@@ -1236,6 +1308,7 @@ export async function getUserProfileData(
         .eq('handle', clean)
         .single();
 
+      if (error) logDataError('repository', error);
       if (error || !profile) return null;
 
       const user: User = {
@@ -1256,10 +1329,13 @@ export async function getUserProfileData(
         contributions: [],
         reports: [],
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
+
+  if (!allowMockData) return mockDataUnavailable('getUserProfileData', null);
 
   const user = mockUsers.find(
     (u) =>
@@ -1312,6 +1388,8 @@ export async function getUserPreferences(): Promise<UserPreferences> {
  * Gets revision history for a series
  */
 export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getSeriesRevisions', []);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
@@ -1320,6 +1398,7 @@ export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> 
         .eq('series_id', seriesId)
         .order('created_at', { ascending: false });
 
+      if (error) logDataError('repository', error);
       if (error || !data || data.length === 0) {
         return [];
       }
@@ -1335,7 +1414,8 @@ export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> 
         submittedAt: r.created_at ? String(r.created_at).split('T')[0] : '2024-01-01',
         reverted: Boolean(r.reverted),
       }));
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return [];
     }
   }
@@ -1369,6 +1449,8 @@ export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> 
  * Gets all pending/open moderation reports for the mod queue
  */
 export async function getAllModerationReports(): Promise<UserReport[]> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getAllModerationReports', []);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
@@ -1377,6 +1459,7 @@ export async function getAllModerationReports(): Promise<UserReport[]> {
         .eq('status', 'open')
         .order('created_at', { ascending: false });
 
+      if (error) logDataError('repository', error);
       if (error || !data) return [];
 
       return data.map((r: any) => ({
@@ -1395,7 +1478,8 @@ export async function getAllModerationReports(): Promise<UserReport[]> {
           note: r.notes,
         },
       }));
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return [];
     }
   }
@@ -1407,19 +1491,51 @@ export async function getAllModerationReports(): Promise<UserReport[]> {
  * Checks if a title ID or shortId has been merged/redirected
  */
 export async function checkRedirect(fromIdOrShortId: number | string): Promise<number | string | null> {
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('checkRedirect', null);
+
   const isNumeric = typeof fromIdOrShortId === 'number' || /^\d+$/.test(String(fromIdOrShortId));
 
   if (isSupabaseConfigured) {
-    try {
-      let query = supabasePublic.from('redirects').select('to_id');
-      if (isNumeric) {
-        query = query.eq('from_id', Number(fromIdOrShortId));
-      }
+    if (isNumeric) {
+      try {
+        const { data, error } = await supabasePublic
+          .from('redirects')
+          .select('to_id')
+          .eq('from_id', Number(fromIdOrShortId))
+          .single();
 
-      const { data, error } = await query.single();
-      if (error || !data) return null;
-      return Number(data.to_id);
-    } catch {
+        if (error) {
+          logDataError('checkRedirect: numeric redirect query', error);
+          return null;
+        }
+        if (!data) return null;
+        return Number(data.to_id);
+      } catch (error) {
+        logDataError('checkRedirect: numeric redirect query', error);
+        return null;
+      }
+    }
+
+    try {
+      const { data, error } = await supabasePublic.rpc('resolve_title_redirect', {
+        p_short_id: String(fromIdOrShortId),
+      });
+
+      if (error) {
+        logDataError('checkRedirect: resolve_title_redirect RPC', error);
+        return null;
+      }
+      if (data == null) return null;
+
+      const value = Array.isArray(data) ? data[0] : data;
+      const toId =
+        typeof value === 'object' && value !== null
+          ? (value.to_id ?? value.resolve_title_redirect)
+          : value;
+
+      return toId == null ? null : Number(toId);
+    } catch (error) {
+      logDataError('checkRedirect: resolve_title_redirect RPC', error);
       return null;
     }
   }
@@ -1473,6 +1589,8 @@ export async function getPlatformBySlug(slug: string): Promise<{
   platform: Platform;
   description: string;
 } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getPlatformBySlug', null);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
@@ -1481,6 +1599,7 @@ export async function getPlatformBySlug(slug: string): Promise<{
         .eq('slug', slug)
         .single();
 
+      if (error) logDataError('repository', error);
       if (error || !data) return null;
 
       const platform: Platform = {
@@ -1497,7 +1616,8 @@ export async function getPlatformBySlug(slug: string): Promise<{
           PLATFORM_DESCRIPTIONS[platform.slug] ||
           `${platform.name} is a streaming destination featuring short drama releases and localized video series.`,
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -1530,6 +1650,10 @@ export async function getSeriesByPlatform(
   pageSize: number;
   totalPages: number;
 }> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getSeriesByPlatform', {
+    items: [], total: 0, page: Math.max(1, page), pageSize: Math.max(1, Math.min(24, pageSize)), totalPages: 0,
+  });
   const clampedPageSize = Math.max(1, Math.min(24, pageSize));
   const safePage = Math.max(1, page);
 
@@ -1540,10 +1664,11 @@ export async function getSeriesByPlatform(
 
       const { data, count, error } = await supabasePublic
         .from('releases')
-        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)', { count: 'exact' })
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)', { count: 'exact' })
         .eq('platform_slug', platformSlug)
         .range(from, to);
 
+      if (error) logDataError('repository', error);
       if (error || !data || count === null) {
         return {
           items: [],
@@ -1566,7 +1691,8 @@ export async function getSeriesByPlatform(
         pageSize: clampedPageSize,
         totalPages: Math.max(1, Math.ceil(count / clampedPageSize)),
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return {
         items: [],
         total: 0,
@@ -1614,6 +1740,8 @@ export async function getTagBySlug(slug: string): Promise<{
   tag: Tag;
   description: string;
 } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getTagBySlug', null);
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabasePublic
@@ -1622,6 +1750,7 @@ export async function getTagBySlug(slug: string): Promise<{
         .eq('slug', slug)
         .single();
 
+      if (error) logDataError('repository', error);
       if (error || !data) return null;
 
       const tag: Tag = {
@@ -1635,7 +1764,8 @@ export async function getTagBySlug(slug: string): Promise<{
           TAG_DESCRIPTIONS[tag.slug] ||
           `Short dramas featuring ${tag.name.toLowerCase()} tropes, themes, and storyline developments.`,
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }
@@ -1666,6 +1796,10 @@ export async function getSeriesByTag(
   pageSize: number;
   totalPages: number;
 }> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getSeriesByTag', {
+    items: [], total: 0, page: Math.max(1, page), pageSize: Math.max(1, Math.min(24, pageSize)), totalPages: 0,
+  });
   const clampedPageSize = Math.max(1, Math.min(24, pageSize));
   const safePage = Math.max(1, page);
 
@@ -1676,10 +1810,11 @@ export async function getSeriesByTag(
 
       const { data, count, error } = await supabasePublic
         .from('series_tags')
-        .select('series:series_id(id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)', { count: 'exact' })
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)', { count: 'exact' })
         .eq('tag_slug', tagSlug)
         .range(from, to);
 
+      if (error) logDataError('repository', error);
       if (error || !data || count === null) {
         return {
           items: [],
@@ -1702,7 +1837,8 @@ export async function getSeriesByTag(
         pageSize: clampedPageSize,
         totalPages: Math.max(1, Math.ceil(count / clampedPageSize)),
       };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return {
         items: [],
         total: 0,
@@ -1758,6 +1894,8 @@ export async function getPersonByIdOrSlug(
   person: Person;
   credits: PersonCredit[];
 } | null> {
+
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getPersonByIdOrSlug', null);
   const shortId = parsePersonParam(idOrSlug);
   if (!shortId) return null;
 
@@ -1775,13 +1913,15 @@ export async function getPersonByIdOrSlug(
         .eq('short_id', shortId)
         .single();
 
+      if (error) logDataError('repository', error);
       if (error || !data) {
         return null;
       }
+      if (!data.short_id) throw new Error('short_id missing in select');
 
       const person: Person = {
         id: Number(data.id),
-        shortId: data.short_id || String(data.id),
+        shortId: data.short_id,
         slug: data.slug,
         name: data.name,
         nativeName: data.native_name,
@@ -1797,7 +1937,8 @@ export async function getPersonByIdOrSlug(
         }));
 
       return { person, credits };
-    } catch {
+    } catch (error) {
+      logDataError('repository', error);
       return null;
     }
   }

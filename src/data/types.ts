@@ -115,6 +115,8 @@ export interface UserContribution {
   id: string;
   userId: string;
   seriesId: number;
+  seriesShortId: string;
+  seriesSlug: string;
   seriesTitle: string;
   type: 'alias' | 'release' | 'metadata';
   description: string;

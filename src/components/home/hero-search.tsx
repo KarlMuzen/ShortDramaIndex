@@ -24,6 +24,7 @@ export function HeroSearch() {
     series?: {
       id: number;
       slug: string;
+      shortId: string;
       title: string;
       year: number;
       episodeCount: number;
@@ -195,8 +196,8 @@ export function HeroSearch() {
                   <div className="pt-2">
                     <Link
                       href={titlePath({
-                        id: lookupResult.series.id,
                         slug: lookupResult.series.slug,
+                        shortId: lookupResult.series.shortId,
                       })}
                       onClick={() => setLinkDialogOpen(false)}
                       className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--crimson)] hover:underline"

@@ -146,7 +146,7 @@ export function ProfileTabs({ profileData, isOwner: isOwnerProp }: ProfileTabsPr
                         {c.type}
                       </span>
                       <Link
-                        href={titlePath({ slug: c.seriesSlug || 'title', shortId: c.seriesShortId || String(c.seriesId) })}
+                        href={titlePath({ slug: c.seriesSlug, shortId: c.seriesShortId })}
                         className="font-medium text-[14px] text-[var(--ink)] hover:text-[var(--crimson)] hover:underline"
                       >
                         {c.seriesTitle}

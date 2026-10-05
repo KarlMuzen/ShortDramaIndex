@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 import { MetadataRoute } from 'next';
 import { siteConfig } from '@/src/config/site';
 import {

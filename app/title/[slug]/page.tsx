@@ -153,13 +153,13 @@ export default async function TitlePage({ params }: TitlePageProps) {
     numberOfEpisodes: series.episodeCount,
     startDate: `${series.year}`,
     inLanguage: series.originalLanguage,
-    ...(series.ratingScore > 0 && {
+    ...(series.ratingCount > 0 && series.ratingScore > 0 && {
       aggregateRating: {
         '@type': 'AggregateRating',
         ratingValue: series.ratingScore,
         bestRating: 10,
         worstRating: 1,
-        ratingCount: series.ratingCount || 1,
+        ratingCount: series.ratingCount,
       },
     }),
     ...(primaryOriginalAlias && {
@@ -173,7 +173,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
       {/* Structured Data */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
 
       {/* Breadcrumb Navigation */}
