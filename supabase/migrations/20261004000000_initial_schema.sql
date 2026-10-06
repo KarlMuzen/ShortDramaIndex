@@ -1,3 +1,9 @@
+-- Changed before first apply:
+--   * aliases: removed the invalid table-level unique (expression) constraint; a unique index is created instead
+--   * handle_new_user: lowercases before filtering, never fails on short or duplicate handles
+--   * Policies changed: aliases insert (editors and moderators only), profiles insert (role must be reader),
+--     reports insert (submitted_by must be the caller, status must be open)
+
 -- Extension for fuzzy text search and tri-gram index matching
 create extension if not exists pg_trgm;
 
@@ -43,8 +49,7 @@ create table public.aliases (
   source_label text check (source_label is null or length(source_label) <= 100),
   status text not null default 'pending' check (status in ('verified', 'pending', 'disputed')),
   added_by uuid references public.profiles(id) on delete set null,
-  added_at timestamptz not null default now(),
-  constraint uq_series_language_alias unique (series_id, language, lower(text))
+  added_at timestamptz not null default now()
 );
 
 -- 4. Platforms Table
@@ -149,6 +154,9 @@ create table public.redirects (
 -- INDEXES
 -- ============================================================================
 
+-- One alias text per series and language, ignoring case (a unique index, because a table constraint cannot use an expression)
+create unique index uq_series_language_alias on public.aliases (series_id, language, lower(text));
+
 -- Tri-gram GIN indexes for fast multilingual search
 create index idx_aliases_text_trgm on public.aliases using gin (lower(text) gin_trgm_ops);
 create index idx_series_title_trgm on public.series using gin (lower(title) gin_trgm_ops);
@@ -228,23 +236,51 @@ begin
 end;
 $$;
 
--- Automatic profile provision on user signup
+-- Automatic profile provision on user signup.
+-- Never raises because of a handle: short, empty or duplicate handles get a safe fallback.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_base text;
+  v_handle text;
+  v_display text;
+  v_attempts integer := 0;
 begin
-  insert into public.profiles (id, handle, display_name, role, joined_at)
-  values (
-    new.id,
-    coalesce(nullif(lower(regexp_replace(new.raw_user_meta_data->>'handle', '[^a-z0-9_]', '', 'g')), ''), 'user_' || substr(new.id::text, 1, 8)),
-    coalesce(nullif(new.raw_user_meta_data->>'display_name', ''), 'Reader'),
-    'reader',
-    now()
-  )
-  on conflict (id) do nothing;
+  -- Lowercase first, then keep only a-z, 0-9 and underscore, at most 40 characters
+  v_base := left(
+    regexp_replace(lower(coalesce(new.raw_user_meta_data->>'handle', '')), '[^a-z0-9_]', '', 'g'),
+    40
+  );
+  if length(v_base) < 3 then
+    v_base := 'user_' || substr(replace(new.id::text, '-', ''), 1, 8);
+  end if;
+
+  v_handle := v_base;
+  while exists (select 1 from public.profiles where handle = v_handle) and v_attempts < 20 loop
+    v_handle := v_base || '_' || substr(md5(random()::text || clock_timestamp()::text), 1, 4);
+    v_attempts := v_attempts + 1;
+  end loop;
+
+  v_display := coalesce(
+    nullif(left(trim(coalesce(new.raw_user_meta_data->>'display_name', '')), 200), ''),
+    nullif(left(split_part(coalesce(new.email, ''), '@', 1), 200), ''),
+    'Reader'
+  );
+
+  begin
+    insert into public.profiles (id, handle, display_name, role, joined_at)
+    values (new.id, v_handle, v_display, 'reader', now())
+    on conflict (id) do nothing;
+  exception when unique_violation then
+    insert into public.profiles (id, handle, display_name, role, joined_at)
+    values (new.id, 'user_' || substr(replace(new.id::text, '-', ''), 1, 20), v_display, 'reader', now())
+    on conflict (id) do nothing;
+  end;
+
   return new;
 end;
 $$;
@@ -313,9 +349,9 @@ create policy "Public profiles are viewable by everyone"
   on public.profiles for select
   using (true);
 
-create policy "Users can insert own profile"
+create policy "Users can insert own profile as reader"
   on public.profiles for insert
-  with check (auth.uid() = id);
+  with check (auth.uid() = id and role = 'reader');
 
 create policy "Users can update own profile display_name"
   on public.profiles for update
@@ -358,9 +394,10 @@ create policy "Anyone can read aliases of visible series"
     )
   );
 
-create policy "Logged in users, editors and mods can insert aliases"
+-- Readers contribute names through reports, so only editors and moderators write aliases directly
+create policy "Editors and mods can insert aliases"
   on public.aliases for insert
-  with check (auth.uid() is not null);
+  with check (public.is_editor_or_mod(auth.uid()));
 
 create policy "Editors and mods can update aliases"
   on public.aliases for update
@@ -504,9 +541,9 @@ create policy "Users read own reports, moderators read all"
   on public.reports for select
   using (auth.uid() = submitted_by or public.is_moderator(auth.uid()));
 
-create policy "Logged in users can insert reports"
+create policy "Logged in users can insert own open reports"
   on public.reports for insert
-  with check (auth.uid() is not null and (submitted_by is null or submitted_by = auth.uid()));
+  with check (auth.uid() is not null and submitted_by = auth.uid() and status = 'open');
 
 create policy "Moderators can update reports"
   on public.reports for update

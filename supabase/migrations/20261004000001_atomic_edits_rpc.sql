@@ -1,4 +1,5 @@
 -- Database RPC function to atomically apply edits across series, aliases, releases, tags, and revisions
+-- Changed before first apply: the alias insert uses the unique index columns for on conflict.
 
 create or replace function public.apply_series_edits(
   p_series_id bigint,
@@ -73,7 +74,7 @@ begin
         v_user_id,
         now()
       )
-      on conflict on constraint uq_series_language_alias do nothing;
+      on conflict (series_id, language, lower(text)) do nothing;
     end loop;
   end if;
 
