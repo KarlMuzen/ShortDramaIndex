@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/src/context/session-context';
 import { useToast } from '@/src/components/ui/toast';
@@ -29,7 +29,13 @@ export function SettingsContent() {
   const { user } = useSession();
   const { showToast } = useToast();
 
-  const [displayName, setDisplayName] = useState(user?.name || 'Elena Vance');
+  const [displayName, setDisplayName] = useState(user?.name || '');
+
+  useEffect(() => {
+    if (user?.name) {
+      setDisplayName(user.name);
+    }
+  }, [user?.name]);
   const [titleLanguage, setTitleLanguage] = useState<'english' | 'original' | 'romanized'>('english');
   const [defaultRegion, setDefaultRegion] = useState('any');
   const [themePreference, setThemePreference] = useState<'system' | 'light' | 'dark'>('system');
@@ -358,7 +364,7 @@ export function SettingsContent() {
       >
         <div className="space-y-3 text-left">
           <p className="text-[13px] text-[var(--ink)] leading-relaxed">
-            This will permanently delete your watchlist, 5 drama score ratings, and contribution history from {siteConfig.name}.
+            This will permanently delete your watchlist, drama score ratings, and contribution history from {siteConfig.name}.
           </p>
           <div className="p-3 bg-[var(--surface-subtle)] rounded-[8px] text-[12px] text-[var(--muted)] border border-[var(--line)]">
             This action cannot be undone. All personal lists will be wiped immediately.

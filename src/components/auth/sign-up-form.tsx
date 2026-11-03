@@ -144,7 +144,7 @@ export function SignUpForm() {
           <form onSubmit={handleSignUp} className="space-y-4">
             <TextField
               label="Display name"
-              placeholder="e.g. Elena Vance"
+              placeholder="e.g. Jane Doe"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               required

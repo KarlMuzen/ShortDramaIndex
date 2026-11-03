@@ -96,7 +96,7 @@ export function TakedownForm() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <TextField
           label="Your full name or entity"
-          placeholder="e.g. Eleanor Vance / Lumen Media Group"
+          placeholder="e.g. Jane Doe / Official Rights Holder"
           value={claimantName}
           onChange={(e) => setClaimantName(e.target.value)}
           required
