@@ -130,7 +130,7 @@ export function HeroSearch() {
           <form onSubmit={handleLookupLink} className="space-y-3">
             <TextField
               label="Platform URL or watch link"
-              placeholder="https://example.com/lumentv/series/101"
+              placeholder="https://www.reelshort.com/series/101"
               value={linkInput}
               onChange={(e) => setLinkInput(e.target.value)}
               leftIcon={<LinkIcon className="w-4 h-4" />}
@@ -142,10 +142,10 @@ export function HeroSearch() {
                 <span className="mr-1">Try:</span>
                 <button
                   type="button"
-                  onClick={() => handleSampleLink('https://example.com/lumentv/series/101')}
+                  onClick={() => handleSampleLink('https://www.reelshort.com/series/101')}
                   className="underline hover:text-[var(--ink)] cursor-pointer mr-2"
                 >
-                  Lumen TV link
+                  ReelShort link
                 </button>
                 <button
                   type="button"

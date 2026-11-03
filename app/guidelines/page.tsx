@@ -214,6 +214,19 @@ export default function GuidelinesPage() {
               </div>
             </dl>
           </section>
+
+          {/* Section 5: English Curation & Anti-AI Slop Policy */}
+          <section id="english-curation" className="space-y-3.5 scroll-mt-20">
+            <h2 className="text-[20px] font-semibold text-[var(--ink)] border-b border-[var(--line)] pb-2">
+              5. English Curation &amp; Anti-AI Slop Policy
+            </h2>
+            <p className="text-[var(--muted)]">
+              ShortDramaIndex is curated for English audiences. We prioritize original English-cast productions and verified human-subtitled dramas, so readers can find titles that were made for, or carefully adapted for, English viewers.
+            </p>
+            <p className="text-[var(--muted)]">
+              We exclude low-effort robotic AI dubs. A title with an AI dub is only listed if it achieves widespread community acclaim, with a rating of 8.0 or higher, rather than being included by default.
+            </p>
+          </section>
         </article>
       </div>
     </div>

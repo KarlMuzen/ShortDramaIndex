@@ -114,9 +114,9 @@ export function SearchFilters({
           onChange={(e) => updateParam('lang', e.target.value)}
           options={[
             { value: '', label: 'All languages' },
+            { value: 'en', label: 'English' },
             { value: 'zh', label: 'Chinese (中文)' },
             { value: 'ko', label: 'Korean (한국어)' },
-            { value: 'en', label: 'English' },
             { value: 'es', label: 'Spanish (Español)' },
             { value: 'ja', label: 'Japanese (日本語)' },
           ]}
@@ -151,6 +151,8 @@ export function SearchFilters({
           onChange={(e) => updateParam('year', e.target.value)}
           options={[
             { value: '', label: 'All years' },
+            { value: '2026', label: '2026' },
+            { value: '2025', label: '2025' },
             { value: '2024', label: '2024' },
             { value: '2023', label: '2023' },
           ]}

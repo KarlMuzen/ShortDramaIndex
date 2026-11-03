@@ -582,7 +582,7 @@ export default function DevKitPage() {
                 </MenuItem>
               </Menu>
 
-              <Tooltip content="Official release on Lumen TV">
+              <Tooltip content="Official release on ReelShort">
                 <Button variant="quiet" size="md" rightIcon={<ExternalLink className="w-3.5 h-3.5" />}>
                   Hover for tooltip
                 </Button>
@@ -708,7 +708,7 @@ export default function DevKitPage() {
                   },
                   {
                     label: 'Primary Platform',
-                    value: 'Lumen TV (Global)',
+                    value: 'ReelShort (Global)',
                     hint: 'Official distributor with English & Spanish subtitles',
                   },
                 ]}

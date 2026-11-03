@@ -14,6 +14,38 @@ interface CsvRow {
   alias_source_url?: string;
   platform_slug?: string;
   release_url?: string;
+  poster_url?: string;
+  tags?: string;
+}
+
+const KNOWN_PLATFORMS: Record<string, { name: string; url: string }> = {
+  reelshort: { name: 'ReelShort', url: 'https://www.reelshort.com' },
+  dramabox: { name: 'DramaBox', url: 'https://www.dramaboxapp.com' },
+  shortmax: { name: 'ShortMax', url: 'https://www.shortmax.com' },
+  'kalos-tv': { name: 'Kalos TV', url: 'https://www.kalostv.com' },
+  goodshort: { name: 'GoodShort', url: 'https://www.goodshort.com' },
+  netshort: { name: 'NetShort', url: 'https://www.netshort.com' },
+  flextv: { name: 'FlexTV', url: 'https://www.flextv.cc' },
+  youtube: { name: 'YouTube', url: 'https://www.youtube.com' },
+};
+
+function platformNameForSlug(slug: string): string {
+  return (
+    KNOWN_PLATFORMS[slug]?.name ||
+    slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
+function platformUrlForSlug(slug: string, releaseUrl?: string): string {
+  if (KNOWN_PLATFORMS[slug]) return KNOWN_PLATFORMS[slug].url;
+  if (releaseUrl) {
+    try {
+      return new URL(releaseUrl.trim()).origin;
+    } catch {
+      // fall through to slug-based fallback
+    }
+  }
+  return `https://www.${slug}.com`;
 }
 
 function isValidHttpUrl(str?: string): boolean {
@@ -60,7 +92,7 @@ function parseCsvLine(line: string): string[] {
   return result;
 }
 
-export async function importCsv(filePath: string, isDryRun: boolean = false) {
+export async function importCsv(filePath: string, isDryRun: boolean = false, isPublic: boolean = false) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -101,6 +133,8 @@ export async function importCsv(filePath: string, isDryRun: boolean = false) {
     'alias_source_url',
     'platform_slug',
     'release_url',
+    'poster_url',
+    'tags',
   ];
 
   console.log(`Starting CSV import ${isDryRun ? '(DRY RUN)' : ''}...`);
@@ -184,6 +218,25 @@ export async function importCsv(filePath: string, isDryRun: boolean = false) {
       }
     }
 
+    // 10. Poster URL validation (optional)
+    if (row.poster_url && !isValidHttpUrl(row.poster_url)) {
+      rowErrors.push('poster_url must be a valid http:// or https:// URL');
+    }
+
+    // 11. Tags validation (optional, pipe-separated tag names)
+    const tagEntries: { slug: string; name: string }[] = [];
+    if (row.tags && row.tags.trim()) {
+      for (const part of row.tags.split('|')) {
+        const name = part.trim();
+        if (!name) continue;
+        if (name.length > 100) {
+          rowErrors.push(`tag "${name}" exceeds 100 characters`);
+        } else {
+          tagEntries.push({ slug: slugify(name), name });
+        }
+      }
+    }
+
     if (rowErrors.length > 0) {
       errorCount++;
       console.error(`Row ${rowNumber} [FAILED]:`);
@@ -194,7 +247,7 @@ export async function importCsv(filePath: string, isDryRun: boolean = false) {
     validCount++;
 
     if (isDryRun) {
-      console.log(`Row ${rowNumber} [OK]: "${row.title}" (${yearNum}, ${episodesNum} eps) -> would insert as hidden`);
+      console.log(`Row ${rowNumber} [OK]: "${row.title}" (${yearNum}, ${episodesNum} eps) -> would insert as ${isPublic ? 'public' : 'hidden'}`);
     } else if (supabase) {
       try {
         const slug = `${slugify(row.title)}-${yearNum}`;
@@ -209,8 +262,9 @@ export async function importCsv(filePath: string, isDryRun: boolean = false) {
             year: yearNum,
             episode_count: episodesNum,
             synopsis: row.synopsis || '',
+            poster_url: row.poster_url || null,
             production_status: 'completed',
-            visibility: 'hidden', // Imported as hidden for moderator review
+            visibility: isPublic ? 'public' : 'hidden', // Imported as hidden for moderator review unless --public is passed
           })
           .select('id')
           .single();
@@ -232,13 +286,32 @@ export async function importCsv(filePath: string, isDryRun: boolean = false) {
               language: a.language,
               source_url: row.alias_source_url,
               source_label: 'CSV Import',
-              status: 'pending',
+              status: isPublic ? 'verified' : 'pending',
             });
           }
         }
 
-        // Insert release
+        // Insert tags: upsert each tag, then link it to the series
+        if (tagEntries.length > 0) {
+          for (const tag of tagEntries) {
+            await supabase.from('tags').upsert(tag, { onConflict: 'slug' });
+            await supabase.from('series_tags').upsert(
+              { series_id: seriesId, tag_slug: tag.slug },
+              { onConflict: 'series_id,tag_slug' }
+            );
+          }
+        }
+
+        // Insert release, ensuring the platform exists first
         if (row.platform_slug && row.release_url) {
+          await supabase.from('platforms').upsert(
+            {
+              slug: row.platform_slug,
+              name: platformNameForSlug(row.platform_slug),
+              url: platformUrlForSlug(row.platform_slug, row.release_url),
+            },
+            { onConflict: 'slug' }
+          );
           await supabase.from('releases').insert({
             series_id: seriesId,
             platform_slug: row.platform_slug,
@@ -248,7 +321,7 @@ export async function importCsv(filePath: string, isDryRun: boolean = false) {
           });
         }
 
-        console.log(`Row ${rowNumber} [SUCCESS]: Inserted ID #${seriesId} ("${row.title}") as hidden`);
+        console.log(`Row ${rowNumber} [SUCCESS]: Inserted ID #${seriesId} ("${row.title}") as ${isPublic ? 'public' : 'hidden'}`);
       } catch (err: any) {
         errorCount++;
         console.error(`Row ${rowNumber} [EXCEPTION]: ${err.message}`);
@@ -265,10 +338,11 @@ export async function importCsv(filePath: string, isDryRun: boolean = false) {
 // Run CLI execution
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
+const isPublic = args.includes('--public');
 const fileArgIdx = args.indexOf('--file');
 const filePath = fileArgIdx !== -1 && args[fileArgIdx + 1] ? args[fileArgIdx + 1] : path.join(__dirname, 'sample.csv');
 
-importCsv(filePath, isDryRun).catch((err) => {
+importCsv(filePath, isDryRun, isPublic).catch((err) => {
   console.error('Fatal import error:', err);
   process.exit(1);
 });

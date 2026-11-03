@@ -70,6 +70,11 @@ export function SearchResultRow({ item }: SearchResultRowProps) {
         <div className="flex items-center gap-2 text-[12px] text-[var(--muted)] tabular-nums">
           <span>{series.year}</span>
           <span>{series.episodeCount} eps</span>
+          {series.originalLanguage === 'en' ? (
+            <span className="font-medium text-[var(--status-verified)]">Original English</span>
+          ) : (
+            <span>English Subtitled / Adapted</span>
+          )}
           {series.ratingScore > 0 && (
             <span className="inline-flex items-center gap-1 text-[var(--ink)] font-semibold">
               <Star className="w-3 h-3 fill-[var(--crimson)] text-[var(--crimson)] shrink-0" />

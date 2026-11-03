@@ -232,7 +232,7 @@ export function SearchBarHeader({
               type="url"
               value={pasteLinkInput}
               onChange={(e) => setPasteLinkInput(e.target.value)}
-              placeholder="https://example.com/lumentv/series/101"
+              placeholder="https://www.reelshort.com/series/101"
               required
               className="w-full min-w-0 h-10 px-3 text-[14px] bg-[var(--surface)] text-[var(--ink)] placeholder:text-[var(--muted)] rounded-[8px] border border-[var(--line)] hover:border-[var(--line-strong)] focus:outline-2 focus:outline-[var(--crimson)] focus:outline-offset-0 outline-none transition-colors"
             />
@@ -244,11 +244,11 @@ export function SearchBarHeader({
               <button
                 type="button"
                 onClick={() =>
-                  setPasteLinkInput('https://example.com/lumentv/series/101')
+                  setPasteLinkInput('https://www.reelshort.com/series/101')
                 }
                 className="underline hover:text-[var(--ink)] cursor-pointer"
               >
-                Lumen TV link
+                ReelShort link
               </button>
             </div>
 

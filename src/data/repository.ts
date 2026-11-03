@@ -86,9 +86,15 @@ function isPotentialUrl(str: string): boolean {
     s.includes('.tv/') ||
     s.includes('youtu.be') ||
     s.includes('youtube.com') ||
-    s.includes('lumentv') ||
-    s.includes('reelway') ||
-    s.includes('shortline')
+    s.includes('reelshort') ||
+    s.includes('dramabox') ||
+    s.includes('shortmax') ||
+    s.includes('kalostv') ||
+    s.includes('kalos-tv') ||
+    s.includes('goodshort') ||
+    s.includes('netshort') ||
+    s.includes('flextv') ||
+    s.includes('tiktok.com')
   );
 }
 
@@ -259,7 +265,7 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
     try {
       const { data: popularData, error: popError } = await supabasePublic
         .from('series')
-        .select('id, short_id, slug, title, year, episode_count, visibility, list_count, rating_count')
+        .select('id, short_id, slug, title, year, episode_count, poster_url, rating_score, original_language, visibility, list_count, rating_count')
         .eq('visibility', 'public')
         .order('list_count', { ascending: false })
         .limit(6);
@@ -301,13 +307,14 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
           shortId: p.short_id,
         slug: p.slug,
         title: p.title,
-        originalLanguage: 'zh',
+        posterUrl: p.poster_url || undefined,
+        originalLanguage: p.original_language || 'en',
         year: p.year,
         episodeCount: p.episode_count,
         synopsis: '',
         updatedAt: '2024-01-01',
         visibility: p.visibility,
-        ratingScore: 0,
+        ratingScore: Number(p.rating_score || 0),
         ratingCount: p.rating_count || 0,
         tags: [],
         aliases: [],
@@ -340,9 +347,9 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         }));
 
       const browseLanguages: BrowseLanguage[] = [
+        { code: 'en', label: 'English', nativeLabel: 'English' },
         { code: 'zh', label: 'Chinese', nativeLabel: '中文' },
         { code: 'ko', label: 'Korean', nativeLabel: '한국어' },
-        { code: 'en', label: 'English', nativeLabel: 'English' },
         { code: 'es', label: 'Spanish', nativeLabel: 'Español' },
         { code: 'ja', label: 'Japanese', nativeLabel: '日本語' },
       ];
@@ -401,9 +408,9 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
   }
 
   const browseLanguages: BrowseLanguage[] = [
+    { code: 'en', label: 'English', nativeLabel: 'English', count: languageCounts['en'] || undefined },
     { code: 'zh', label: 'Chinese', nativeLabel: '中文', count: languageCounts['zh'] || undefined },
     { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: languageCounts['ko'] || undefined },
-    { code: 'en', label: 'English', nativeLabel: 'English', count: languageCounts['en'] || undefined },
     { code: 'es', label: 'Spanish', nativeLabel: 'Español', count: languageCounts['es'] || undefined },
     { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: languageCounts['ja'] || undefined },
   ];
@@ -1553,12 +1560,20 @@ export async function checkRedirect(fromIdOrShortId: number | string): Promise<n
 }
 
 const PLATFORM_DESCRIPTIONS: Record<string, string> = {
-  'lumen-tv':
-    'Lumen TV is a dedicated streaming service focusing on romantic sagas, CEO melodramas, and urban fantasy series with multi-language subtitle tracks.',
-  'reelway':
-    'Reelway specializes in fast-paced episodic thrillers, revenge narratives, and second-chance family dramas designed specifically for mobile viewing.',
-  'shortline':
-    'Shortline hosts an expansive international catalog of short dramas with high-frequency episodic releases and localized dubs.',
+  'reelshort':
+    'ReelShort is a leading short drama streaming service focusing on romantic sagas, CEO melodramas, and urban fantasy series with multi-language subtitle tracks.',
+  'dramabox':
+    'DramaBox specializes in fast-paced episodic thrillers, revenge narratives, and second-chance family dramas designed specifically for mobile viewing.',
+  'shortmax':
+    'ShortMax hosts an expansive international catalog of short dramas with high-frequency episodic releases and localized dubs.',
+  'kalos-tv':
+    'Kalos TV is a short drama streaming service featuring romantic sagas, CEO melodramas, and international releases with localized subtitles.',
+  'goodshort':
+    'GoodShort is a short drama streaming service featuring romantic sagas, revenge narratives, and mobile-first episodic series.',
+  'netshort':
+    'NetShort is a short drama streaming service featuring international short dramas with localized subtitles and dubs.',
+  'flextv':
+    'FlexTV is a short drama streaming service featuring romantic sagas, urban fantasy, and high-frequency episodic releases.',
   'youtube':
     'Official and publisher-licensed YouTube channel releases for short drama series, pilot episodes, and complete compilation playlists.',
 };

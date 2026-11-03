@@ -40,7 +40,7 @@ export function SearchNoResults({ query }: SearchNoResultsProps) {
         <ul className="list-disc pl-5 space-y-1">
           <li>Check for typos or romanization spellings.</li>
           <li>Try searching with the original Chinese characters (e.g. 霸总, 顾少, 逆袭).</li>
-          <li>Paste a direct watch link from YouTube, Lumen TV, or Reelway to run an automated link check.</li>
+          <li>Paste a direct watch link from YouTube, ReelShort, DramaBox, ShortMax, Kalos TV, GoodShort, NetShort, or FlexTV to run an automated link check.</li>
         </ul>
       </div>
 

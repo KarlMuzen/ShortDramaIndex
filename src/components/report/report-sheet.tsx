@@ -121,7 +121,7 @@ export function ReportSheet({
   const [detailSourceUrl, setDetailSourceUrl] = useState('');
 
   const [releasePlatform, setReleasePlatform] = useState(
-    targetRelease?.platform || series.releases[0]?.platform || 'Lumen TV'
+    targetRelease?.platform || series.releases[0]?.platform || 'ReelShort'
   );
   const [replacementUrl, setReplacementUrl] = useState('');
   const [brokenNote, setBrokenNote] = useState('');

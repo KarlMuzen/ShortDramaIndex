@@ -64,7 +64,7 @@ function TitleEditContent({
   const [newAliasSource, setNewAliasSource] = useState('Official Uploader');
 
   // New release form
-  const [newRelPlatform, setNewRelPlatform] = useState('Lumen TV');
+  const [newRelPlatform, setNewRelPlatform] = useState('ReelShort');
   const [newRelRegion, setNewRelRegion] = useState('Global');
   const [newRelUrl, setNewRelUrl] = useState('');
   const [newRelEps, setNewRelEps] = useState(initialSeries.episodeCount);
@@ -374,7 +374,7 @@ function TitleEditContent({
               <div className="sm:col-span-3">
                 <input
                   type="text"
-                  placeholder="Source (e.g. Lumen TV)"
+                  placeholder="Source (e.g. ReelShort)"
                   value={newAliasSource}
                   onChange={(e) => setNewAliasSource(e.target.value)}
                   className="w-full h-9 px-3 text-[13px] bg-[var(--surface)] text-[var(--ink)] rounded-[6px] border border-[var(--line)] outline-none"
@@ -475,9 +475,13 @@ function TitleEditContent({
                   onChange={(e) => setNewRelPlatform(e.target.value)}
                   className="w-full h-9 px-2 text-[13px] bg-[var(--surface)] text-[var(--ink)] rounded-[6px] border border-[var(--line)] outline-none"
                 >
-                  <option value="Lumen TV">Lumen TV</option>
-                  <option value="Reelway">Reelway</option>
-                  <option value="Shortline">Shortline</option>
+                  <option value="ReelShort">ReelShort</option>
+                  <option value="DramaBox">DramaBox</option>
+                  <option value="ShortMax">ShortMax</option>
+                  <option value="Kalos TV">Kalos TV</option>
+                  <option value="GoodShort">GoodShort</option>
+                  <option value="NetShort">NetShort</option>
+                  <option value="FlexTV">FlexTV</option>
                   <option value="YouTube">YouTube</option>
                 </select>
               </div>
