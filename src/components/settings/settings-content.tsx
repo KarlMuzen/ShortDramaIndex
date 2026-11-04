@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/src/context/session-context';
+import { useTheme } from '@/src/context/theme-context';
 import { useToast } from '@/src/components/ui/toast';
 import { Button } from '@/src/components/ui/button';
 import { TextField } from '@/src/components/ui/text-field';
-import { Select } from '@/src/components/ui/select';
 import { Radio } from '@/src/components/ui/radio';
 import { Dialog } from '@/src/components/ui/dialog';
 import { Breadcrumb } from '@/src/components/ui/breadcrumb';
@@ -14,10 +14,9 @@ import { siteConfig } from '@/src/config/site';
 import {
   updateUserPreferencesAction,
   deleteAccountAction,
+  getExportDataAction,
 } from '@/src/data/actions';
 import {
-  Globe,
-  Tv,
   Moon,
   Download,
   Trash2,
@@ -26,7 +25,8 @@ import {
 
 export function SettingsContent() {
   const router = useRouter();
-  const { user } = useSession();
+  const { user, refreshSession } = useSession();
+  const { theme, setTheme } = useTheme();
   const { showToast } = useToast();
 
   const [displayName, setDisplayName] = useState(user?.name || '');
@@ -36,9 +36,13 @@ export function SettingsContent() {
       setDisplayName(user.name);
     }
   }, [user?.name]);
-  const [titleLanguage, setTitleLanguage] = useState<'english' | 'original' | 'romanized'>('english');
-  const [defaultRegion, setDefaultRegion] = useState('any');
-  const [themePreference, setThemePreference] = useState<'system' | 'light' | 'dark'>('system');
+  // Appearance is owned by useTheme (localStorage); the radios mirror it
+  // and Save applies the choice through setTheme.
+  const [themePreference, setThemePreference] = useState<'system' | 'light' | 'dark'>(theme);
+
+  useEffect(() => {
+    setThemePreference(theme);
+  }, [theme]);
   const [isSaving, setIsSaving] = useState(false);
 
   // Delete account confirmation dialog
@@ -49,25 +53,22 @@ export function SettingsContent() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      await updateUserPreferencesAction({
-        titleLanguage,
-        defaultRegion,
-        theme: themePreference,
+      const result = await updateUserPreferencesAction({
+        displayName,
       });
-
-      // Apply theme preference to document element
-      if (themePreference === 'dark') {
-        document.documentElement.classList.add('dark');
-        document.documentElement.setAttribute('data-theme', 'dark');
-      } else if (themePreference === 'light') {
-        document.documentElement.classList.remove('dark');
-        document.documentElement.setAttribute('data-theme', 'light');
-      } else {
-        // System
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        document.documentElement.classList.toggle('dark', prefersDark);
-        document.documentElement.removeAttribute('data-theme');
+      if (!result.success) {
+        showToast({
+          title: 'Save failed',
+          description: 'Sign in and try again.',
+          type: 'error',
+        });
+        return;
       }
+
+      // Appearance lives in useTheme (localStorage); applying it here
+      // updates the document theme immediately.
+      setTheme(themePreference);
+      await refreshSession();
 
       showToast({
         title: 'Settings saved',
@@ -79,19 +80,22 @@ export function SettingsContent() {
     }
   };
 
-  const handleExportData = () => {
+  const handleExportData = async () => {
+    const result = await getExportDataAction();
+    if (!result.success || !result.data) {
+      showToast({
+        title: 'Export failed',
+        description: 'Sign in and try again.',
+        type: 'error',
+      });
+      return;
+    }
     const exportPayload = {
-      user: {
-        id: user?.id,
-        name: user?.name,
-        handle: user?.handle,
-        role: user?.role,
-      },
-      preferences: {
-        titleLanguage,
-        defaultRegion,
-        themePreference,
-      },
+      user: result.data.user,
+      listEntries: result.data.listEntries,
+      ratings: result.data.ratings,
+      contributions: result.data.contributions,
+      reports: result.data.reports,
       exportedAt: new Date().toISOString(),
       exportVersion: '1.0',
     };
@@ -143,7 +147,7 @@ export function SettingsContent() {
           Account & Display Settings
         </h1>
         <p className="text-[13px] text-[var(--muted)]">
-          Manage your profile name, title language display, default watch regions, and data export.
+          Manage your profile name, appearance, and data export.
         </p>
       </header>
 
@@ -165,70 +169,6 @@ export function SettingsContent() {
               Handle:{' '}
               <span className="font-mono text-[var(--ink)]">@{user?.handle || 'user'}</span>
             </div>
-          </div>
-        </section>
-
-        {/* Title Language Preference */}
-        <section className="space-y-4 p-5 bg-[var(--surface)] border border-[var(--line)] rounded-[12px]">
-          <div className="space-y-1">
-            <h2 className="text-[15px] font-semibold text-[var(--ink)] flex items-center gap-2">
-              <Globe className="w-4 h-4 text-[var(--muted)]" />
-              <span>Title language priority</span>
-            </h2>
-            <p className="text-[13px] text-[var(--muted)]">
-              Select which language to emphasize first across catalog grids and search results.
-            </p>
-          </div>
-
-          <div className="space-y-2 pt-1">
-            <Radio
-              name="title_lang_pref"
-              value="english"
-              checked={titleLanguage === 'english'}
-              onChange={() => setTitleLanguage('english')}
-              label="English title first (e.g. The Billionaire’s Secret Fiancée)"
-            />
-            <Radio
-              name="title_lang_pref"
-              value="original"
-              checked={titleLanguage === 'original'}
-              onChange={() => setTitleLanguage('original')}
-              label="Original CJK title first (e.g. 霸总的秘密未婚妻)"
-            />
-            <Radio
-              name="title_lang_pref"
-              value="romanized"
-              checked={titleLanguage === 'romanized'}
-              onChange={() => setTitleLanguage('romanized')}
-              label="Romanized title first (e.g. Ba Zong De Mi Mi Wei Hun Qi)"
-            />
-          </div>
-        </section>
-
-        {/* Region Default */}
-        <section className="space-y-4 p-5 bg-[var(--surface)] border border-[var(--line)] rounded-[12px]">
-          <div className="space-y-1">
-            <h2 className="text-[15px] font-semibold text-[var(--ink)] flex items-center gap-2">
-              <Tv className="w-4 h-4 text-[var(--muted)]" />
-              <span>Default region for Where to watch</span>
-            </h2>
-            <p className="text-[13px] text-[var(--muted)]">
-              Preselects your local distributor region when viewing watch options.
-            </p>
-          </div>
-
-          <div className="max-w-xs">
-            <Select
-              value={defaultRegion}
-              onChange={(e) => setDefaultRegion(e.target.value)}
-              options={[
-                { value: 'any', label: 'Any region (Global default)' },
-                { value: 'Global', label: 'Global' },
-                { value: 'US', label: 'United States & Canada' },
-                { value: 'Latin America', label: 'Latin America' },
-                { value: 'Asia', label: 'Asia-Pacific' },
-              ]}
-            />
           </div>
         </section>
 

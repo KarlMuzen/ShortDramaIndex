@@ -20,7 +20,7 @@ import {
   Tag,
   Revision,
 } from './types';
-import { lookupLink, logDataError } from './repository';
+import { lookupLink, logDataError, getUserProfileData } from './repository';
 import { allowMockData, isSupabaseConfigured } from './supabase-public';
 
 function isValidHttpUrl(str?: string): boolean {
@@ -414,10 +414,136 @@ export async function updateListEntryAction(params: {
 }
 
 
+/**
+ * Records a "missing drama" request as a real row in public.reports.
+ * Series-less by design (the drama is not in the catalog yet), so
+ * series_id is null and the request lives in data for moderators.
+ * NOTE: requires reports.series_id to be nullable (migration
+ * 20261004000011); until that migration is run live, the insert fails
+ * and this returns success: false instead of faking a submission.
+ */
+export async function submitMissingDramaRequestAction(input: {
+  title: string;
+  alternateName?: string;
+  url?: string;
+  note?: string;
+}): Promise<{ success: boolean; requireSignIn?: boolean }> {
+  if (!input.title || !input.title.trim()) {
+    return { success: false };
+  }
+  if (isSupabaseConfigured) {
+    const supabase = await createClient();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      logDataError('submitMissingDramaRequestAction: getUser', authError);
+      return { success: false };
+    }
+    if (!authData.user) return { success: false, requireSignIn: true };
+
+    const { error } = await supabase.from('reports').insert({
+      series_id: null,
+      type: 'other',
+      status: 'open',
+      submitted_by: authData.user.id,
+      data: {
+        title: input.title.trim(),
+        alternateName: input.alternateName?.trim() || undefined,
+        url: input.url?.trim() || undefined,
+        note: input.note?.trim() || undefined,
+      },
+    });
+    if (error) {
+      logDataError('submitMissingDramaRequestAction: insert report', error);
+      return { success: false };
+    }
+    return { success: true };
+  }
+
+  if (!allowMockData) {
+    logDataError('submitMissingDramaRequestAction', new Error('Mock data is not allowed'));
+    return { success: false };
+  }
+  return { success: false };
+}
+
 export async function updateUserPreferencesAction(
-  prefs: Partial<UserPreferences>
+  prefs: Partial<UserPreferences> & { displayName?: string }
 ): Promise<{ success: boolean }> {
+  if (isSupabaseConfigured) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false };
+    if (prefs.displayName !== undefined) {
+      const displayName = prefs.displayName.trim();
+      if (!displayName) return { success: false };
+      const { error } = await supabase
+        .from('profiles')
+        .update({ display_name: displayName })
+        .eq('id', user.id);
+      if (error) {
+        logDataError('updateUserPreferencesAction: update profile', error);
+        return { success: false };
+      }
+    }
+    return { success: true };
+  }
+
+  if (!allowMockData) {
+    logDataError('updateUserPreferencesAction', new Error('Mock data is not allowed'));
+    return { success: false };
+  }
   return { success: true };
+}
+
+/**
+ * Returns the signed-in user's real profile data for the Settings data
+ * export: watchlist entries, ratings, contributions, and reports.
+ */
+export async function getExportDataAction(): Promise<{
+  success: boolean;
+  data?: {
+    user: { id: string; handle: string; name: string; role: string };
+    listEntries: unknown;
+    ratings: unknown;
+    contributions: unknown;
+    reports: unknown;
+  };
+}> {
+  if (!isSupabaseConfigured) {
+    return { success: false };
+  }
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    return { success: false };
+  }
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('handle, display_name, role')
+    .eq('id', authData.user.id)
+    .single();
+  if (profileError || !profile) {
+    return { success: false };
+  }
+  const profileData = await getUserProfileData(profile.handle);
+  if (!profileData) {
+    return { success: false };
+  }
+  return {
+    success: true,
+    data: {
+      user: {
+        id: profileData.user.id,
+        handle: profileData.user.handle,
+        name: profileData.user.name,
+        role: profileData.user.role,
+      },
+      listEntries: profileData.listEntries,
+      ratings: profileData.ratings,
+      contributions: profileData.contributions,
+      reports: profileData.reports,
+    },
+  };
 }
 
 export async function deleteAccountAction(): Promise<{ success: boolean }> {
@@ -657,6 +783,39 @@ export async function mergeSeriesAction(params: {
 export async function revertRevisionAction(
   revisionId: string
 ): Promise<{ success: boolean }> {
+  if (isSupabaseConfigured) {
+    const supabase = await createClient();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      logDataError('revertRevisionAction: getUser', authError);
+      return { success: false };
+    }
+    if (!authData.user) return { success: false };
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', authData.user.id)
+      .single();
+    if (profileError || !profile || profile.role !== 'moderator') {
+      return { success: false };
+    }
+
+    const { error } = await supabase
+      .from('revisions')
+      .update({ reverted: true })
+      .eq('id', revisionId);
+    if (error) {
+      logDataError('revertRevisionAction: update revision', error);
+      return { success: false };
+    }
+    return { success: true };
+  }
+
+  if (!allowMockData) {
+    logDataError('revertRevisionAction', new Error('Mock data is not allowed'));
+    return { success: false };
+  }
   const rev = mockRevisions.find((r) => r.id === revisionId);
   if (rev) {
     rev.reverted = true;

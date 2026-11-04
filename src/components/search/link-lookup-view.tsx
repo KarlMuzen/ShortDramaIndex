@@ -9,6 +9,8 @@ import { Poster } from '@/src/components/ui/poster';
 import { Dialog } from '@/src/components/ui/dialog';
 import { TextField } from '@/src/components/ui/text-field';
 import { useToast } from '@/src/components/ui/toast';
+import { useSession } from '@/src/context/session-context';
+import { submitMissingDramaRequestAction } from '@/src/data/actions';
 import {
   CheckCircle2,
   AlertCircle,
@@ -24,8 +26,50 @@ interface LinkLookupViewProps {
 
 export function LinkLookupView({ lookupResult }: LinkLookupViewProps) {
   const { showToast } = useToast();
+  const { user } = useSession();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [dismissedPossible, setDismissedPossible] = useState<number[]>([]);
+  const [addTitle, setAddTitle] = useState('');
+  const [addAlternateName, setAddAlternateName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmitTitle = async () => {
+    if (!addTitle.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const result = await submitMissingDramaRequestAction({
+        title: addTitle,
+        alternateName: addAlternateName || undefined,
+        url: lookupResult.url,
+      });
+      if (result.requireSignIn) {
+        showToast({
+          title: 'Sign in to continue',
+          description: 'Sign in to request this drama.',
+          type: 'info',
+        });
+        return;
+      }
+      if (!result.success) {
+        showToast({
+          title: 'Submission failed',
+          description: 'Something went wrong. Please try again.',
+          type: 'error',
+        });
+        return;
+      }
+      setAddDialogOpen(false);
+      setAddTitle('');
+      setAddAlternateName('');
+      showToast({
+        title: 'Submission received',
+        description: 'Your title submission is pending moderator approval.',
+        type: 'success',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // 1. Invalid URL State
   if (lookupResult.type === 'invalid_url') {
@@ -239,13 +283,7 @@ export function LinkLookupView({ lookupResult }: LinkLookupViewProps) {
         <Button
           variant="secondary"
           size="sm"
-          onClick={() =>
-            showToast({
-              title: 'Request logged',
-              description: 'Our contributors will verify and index this watch source.',
-              type: 'success',
-            })
-          }
+          onClick={() => setAddDialogOpen(true)}
         >
           Request this drama
         </Button>
@@ -266,39 +304,55 @@ export function LinkLookupView({ lookupResult }: LinkLookupViewProps) {
             >
               Cancel
             </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                setAddDialogOpen(false);
-                showToast({
-                  title: 'Submission received',
-                  description: 'Your title submission is pending moderator approval.',
-                  type: 'success',
-                });
-              }}
-            >
-              Submit title
-            </Button>
+            {user && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSubmitTitle}
+                isLoading={isSubmitting}
+                disabled={!addTitle.trim()}
+              >
+                Submit title
+              </Button>
+            )}
           </>
         }
       >
-        <div className="space-y-3.5 text-left">
-          <TextField
-            label="Primary title"
-            placeholder="e.g. The Heir's Secret Bride"
-            required
-          />
-          <TextField
-            label="Original / Alternate name (e.g. Chinese)"
-            placeholder="e.g. 霸总的秘密未婚妻"
-          />
-          <TextField
-            label="Watch link URL"
-            value={lookupResult.url}
-            readOnly
-          />
-        </div>
+        {!user ? (
+          <div className="py-6 text-center space-y-4">
+            <p className="text-[14px] text-[var(--ink)]">
+              Sign in to request this drama.
+            </p>
+            <div>
+              <Link href="/sign-in">
+                <Button variant="primary" size="md">
+                  Sign in
+                </Button>
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3.5 text-left">
+            <TextField
+              label="Primary title"
+              value={addTitle}
+              onChange={(e) => setAddTitle(e.target.value)}
+              placeholder="e.g. The Heir's Secret Bride"
+              required
+            />
+            <TextField
+              label="Original / Alternate name (e.g. Chinese)"
+              value={addAlternateName}
+              onChange={(e) => setAddAlternateName(e.target.value)}
+              placeholder="e.g. 霸总的秘密未婚妻"
+            />
+            <TextField
+              label="Watch link URL"
+              value={lookupResult.url}
+              readOnly
+            />
+          </div>
+        )}
       </Dialog>
     </div>
   );

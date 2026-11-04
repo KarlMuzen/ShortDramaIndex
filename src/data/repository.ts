@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import {
   Series,
   Tag,
@@ -897,7 +898,7 @@ export async function searchSeries(params: {
 /**
  * Gets a single series by numeric ID or 5-char shortId
  */
-export async function getSeriesById(idOrShortId: number | string): Promise<Series | null> {
+async function getSeriesByIdUncached(idOrShortId: number | string): Promise<Series | null> {
 
   const isNumeric = typeof idOrShortId === 'number' || /^\d+$/.test(String(idOrShortId));
   const shortId = typeof idOrShortId === 'string' ? parseTitleParam(idOrShortId) || idOrShortId : null;
@@ -948,23 +949,29 @@ export async function getSeriesById(idOrShortId: number | string): Promise<Serie
   return series;
 }
 
+// Cached per request: generateMetadata and the page component share
+// one database fetch instead of running every query twice.
+export const getSeriesById = cache(getSeriesByIdUncached);
+
 /**
  * Gets related series based on shared tags
  */
 export async function getRelatedSeries(
   id: number,
-  limit: number = 4
+  limit: number = 4,
+  existingTags?: Tag[]
 ): Promise<Series[]> {
 
   if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getRelatedSeries', []);
-  const current = await getSeriesById(id);
-  if (!current) return [];
+  // Callers that already fetched the series (e.g. the title page) pass its
+  // tags so this function does not call getSeriesById(id) a second time.
+  const tagSlugs = existingTags
+    ? existingTags.map((t) => t.slug)
+    : (await getSeriesById(id))?.tags.map((t) => t.slug) ?? [];
+  if (tagSlugs.length === 0) return [];
 
   if (isSupabaseConfigured) {
     try {
-      const tagSlugs = current.tags.map((t) => t.slug);
-      if (tagSlugs.length === 0) return [];
-
       const { data, error } = await supabasePublic
         .from('series_tags')
         .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at, production_type, verification_status, studio_name, has_human_cast)')
@@ -992,7 +999,7 @@ export async function getRelatedSeries(
     }
   }
 
-  const currentTagSlugs = new Set(current.tags.map((t) => t.slug));
+  const currentTagSlugs = new Set(tagSlugs);
   const others = mockSeriesList.filter(
     (s) => s.id !== id && s.visibility === 'public'
   );
@@ -1508,7 +1515,7 @@ export async function getUserProfileData(
 
       const { data: reportRows, error: reportError } = await supabasePublic
         .from('reports')
-        .select('*, series:series_id(title)')
+        .select('*, series:series_id(title, slug, short_id)')
         .eq('submitted_by', profile.id)
         .order('created_at', { ascending: false });
       if (reportError) logDataError('getUserProfileData: reports', reportError);
@@ -1666,12 +1673,15 @@ function mapReportRecord(r: any): UserReport {
     type: (r.type as UserReport['type']) || 'wrong_details',
     typeName: REPORT_TYPE_NAMES[r.type] || 'Report',
     seriesId: Number(r.series_id),
-    seriesTitle: seriesRow?.title || 'Drama',
+    seriesTitle: seriesRow?.title || r.data?.title || r.data?.name || 'Drama',
+    seriesSlug: seriesRow?.slug || undefined,
+    seriesShortId: seriesRow?.short_id || undefined,
     status: r.status || 'open',
     submittedBy: r.submitted_by || 'usr_anon',
     submittedAt: r.created_at ? String(r.created_at).split('T')[0] : '2024-01-01',
     moderatorNote: r.moderator_note,
     data: {
+      title: r.data?.title,
       name: r.data?.name,
       url: r.data?.url,
       note: r.data?.note,
@@ -1689,7 +1699,7 @@ export async function getAllModerationReports(): Promise<UserReport[]> {
     try {
       const { data, error } = await supabasePublic
         .from('reports')
-        .select('*, series:series_id(title)')
+        .select('*, series:series_id(title, slug, short_id)')
         .eq('status', 'open')
         .order('created_at', { ascending: false });
 
@@ -1818,7 +1828,7 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
 /**
  * Gets platform details by slug
  */
-export async function getPlatformBySlug(slug: string): Promise<{
+async function getPlatformBySlugUncached(slug: string): Promise<{
   platform: Platform;
   description: string;
 } | null> {
@@ -1868,6 +1878,10 @@ export async function getPlatformBySlug(slug: string): Promise<{
   };
 }
 
+// Cached per request: generateMetadata and the page component share
+// one database fetch instead of running every query twice.
+export const getPlatformBySlug = cache(getPlatformBySlugUncached);
+
 /**
  * Gets paginated series available on a platform
  */
@@ -1890,7 +1904,7 @@ function applySeriesSort(items: Series[], sort: string): Series[] {
   return sorted;
 }
 
-export async function getSeriesByPlatform(
+async function getSeriesByPlatformUncached(
   platformSlug: string,
   page = 1,
   pageSize = 12,
@@ -1988,10 +2002,14 @@ export async function getSeriesByPlatform(
   };
 }
 
+// Cached per request: generateMetadata and the page component share
+// one database fetch instead of running every query twice.
+export const getSeriesByPlatform = cache(getSeriesByPlatformUncached);
+
 /**
  * Gets tag details by slug
  */
-export async function getTagBySlug(slug: string): Promise<{
+async function getTagBySlugUncached(slug: string): Promise<{
   tag: Tag;
   description: string;
 } | null> {
@@ -2036,10 +2054,14 @@ export async function getTagBySlug(slug: string): Promise<{
   };
 }
 
+// Cached per request: generateMetadata and the page component share
+// one database fetch instead of running every query twice.
+export const getTagBySlug = cache(getTagBySlugUncached);
+
 /**
  * Gets paginated series for a specific genre tag
  */
-export async function getSeriesByTag(
+async function getSeriesByTagUncached(
   tagSlug: string,
   page = 1,
   pageSize = 12,
@@ -2136,6 +2158,10 @@ export async function getSeriesByTag(
     totalPages,
   };
 }
+
+// Cached per request: generateMetadata and the page component share
+// one database fetch instead of running every query twice.
+export const getSeriesByTag = cache(getSeriesByTagUncached);
 
 export interface PersonCredit {
   series: Series;
