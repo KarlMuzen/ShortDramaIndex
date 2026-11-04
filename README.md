@@ -2,6 +2,8 @@
 
 The calm reference library and catalog database for short vertical dramas (mini dramas, micro dramas, duanju).
 
+Deployment: https://shortdramaindex.vercel.app (production build of `main`; pushes to `main` trigger a fresh build, which re-generates the statically rendered catalog pages against the live database).
+
 ## Environment Variables & Required Secrets
 
 The following environment variables and GitHub Repository Secrets are required:
