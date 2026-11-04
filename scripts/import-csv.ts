@@ -231,10 +231,24 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
       }
     }
 
+    // Homepage URLs are not watch links: a URL whose pathname is just "/"
+    // points at a platform homepage, not a title, and is rejected outright
+    // so homepage fallbacks can never enter the database again.
+    const isHomepageUrl = (value: string): boolean => {
+      try {
+        const pathname = new URL(value.trim()).pathname;
+        return pathname === '/' || pathname === '';
+      } catch {
+        return false;
+      }
+    };
+
     // 9. Platform release validation
     if (row.platform_slug && row.release_url) {
       if (!isValidHttpUrl(row.release_url)) {
         rowErrors.push('release_url must be a valid http:// or https:// URL');
+      } else if (isHomepageUrl(row.release_url)) {
+        rowErrors.push('release_url must point to a title/watch page, not a platform homepage (pathname "/")');
       }
     }
 
@@ -300,6 +314,8 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
     const estimatedUnlockCostUsd = parseOptionalNumber(row.estimated_unlock_cost_usd, 'estimated_unlock_cost_usd');
     if (row.direct_watch_url && !isValidHttpUrl(row.direct_watch_url)) {
       rowErrors.push('direct_watch_url must be a valid http:// or https:// URL');
+    } else if (row.direct_watch_url && isHomepageUrl(row.direct_watch_url)) {
+      rowErrors.push('direct_watch_url must point to a title/watch page, not a platform homepage (pathname "/")');
     }
     // Only fields the CSV actually provides are written; omitted fields keep their existing DB value on update.
     const seriesOptionalFields: Record<string, unknown> = {};
@@ -307,7 +323,12 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
     if (row.verification_status?.trim()) seriesOptionalFields.verification_status = row.verification_status.trim();
     if (row.studio_name?.trim()) seriesOptionalFields.studio_name = row.studio_name.trim();
     if (hasHumanCast !== undefined) seriesOptionalFields.has_human_cast = hasHumanCast;
+    // The CSV has no avg_episode_minutes column; short dramas average
+    // ~2 minutes per episode, so imported series get 2 when unspecified.
+    seriesOptionalFields.avg_episode_minutes = 2;
     const releaseOptionalFields: Record<string, unknown> = {};
+    // Episodes from the CSV are the release's episode count as well.
+    releaseOptionalFields.episode_count = episodesNum;
     if (row.monetization_type?.trim()) releaseOptionalFields.monetization_type = row.monetization_type.trim();
     if (freeEpisodes !== undefined) releaseOptionalFields.free_episodes = freeEpisodes;
     if (coinsPerEpisode !== undefined) releaseOptionalFields.coins_per_episode = coinsPerEpisode;
