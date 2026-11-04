@@ -253,11 +253,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
             <span className="font-semibold text-[var(--ink)]">{series.year}</span>
             {series.studioName && <span>{series.studioName}</span>}
             {originCountryName && <span>{originCountryName}</span>}
-            {series.originalLanguage === 'en' ? (
-              <span className="font-medium text-[var(--status-verified)]">Original English</span>
-            ) : (
-              <span>English Subtitled / Adapted</span>
-            )}
+            <span className="font-medium text-[var(--status-verified)]">Original {originalLangName}</span>
             <span>{series.episodeCount} eps</span>
             {series.avgEpisodeMinutes ? (
               <span>{series.avgEpisodeMinutes} min/ep</span>

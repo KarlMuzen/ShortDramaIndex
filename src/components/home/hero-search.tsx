@@ -130,7 +130,7 @@ export function HeroSearch() {
           <form onSubmit={handleLookupLink} className="space-y-3">
             <TextField
               label="Platform URL or watch link"
-              placeholder="https://www.reelshort.com/series/101"
+              placeholder="https://www.reelshort.com/movie/the-double-life-of-my-billionaire-husband-65a8cec883959aedd8001107"
               value={linkInput}
               onChange={(e) => setLinkInput(e.target.value)}
               leftIcon={<LinkIcon className="w-4 h-4" />}
@@ -142,14 +142,14 @@ export function HeroSearch() {
                 <span className="mr-1">Try:</span>
                 <button
                   type="button"
-                  onClick={() => handleSampleLink('https://www.reelshort.com/series/101')}
+                  onClick={() => handleSampleLink('https://www.reelshort.com/movie/the-double-life-of-my-billionaire-husband-65a8cec883959aedd8001107')}
                   className="underline hover:text-[var(--ink)] cursor-pointer mr-2"
                 >
                   ReelShort link
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSampleLink('https://www.youtube.com/playlist?list=PL_invented_fiancee_101')}
+                  onClick={() => handleSampleLink('https://www.youtube.com/playlist?list=PLg0v6Pxkpba2NE-0yXokx5BPsZpcmMHOj')}
                   className="underline hover:text-[var(--ink)] cursor-pointer"
                 >
                   YouTube playlist

@@ -7,6 +7,8 @@ import { RatingInput } from '@/src/components/ui/rating-input';
 import { ReportSheet } from '@/src/components/report/report-sheet';
 import { useToast } from '@/src/components/ui/toast';
 import { Series, ListStatus } from '@/src/data/types';
+import { updateListEntryAction } from '@/src/data/actions';
+import { useSession } from '@/src/context/session-context';
 import { Bookmark, Star, Flag, Check } from 'lucide-react';
 
 interface TitleActionsProps {
@@ -15,6 +17,7 @@ interface TitleActionsProps {
 
 export function TitleActions({ series }: TitleActionsProps) {
   const { showToast } = useToast();
+  const { user } = useSession();
 
   const [listStatus, setListStatus] = useState<ListStatus | null>(null);
   const [listDialogOpen, setListDialogOpen] = useState(false);
@@ -22,9 +25,26 @@ export function TitleActions({ series }: TitleActionsProps) {
   const [reportSheetOpen, setReportSheetOpen] = useState(false);
   const [userRating, setUserRating] = useState<number>(0);
 
-  const handleSaveListStatus = (status: ListStatus) => {
-    setListStatus(status);
+  const handleSaveListStatus = async (status: ListStatus) => {
     setListDialogOpen(false);
+    if (!user) {
+      showToast({
+        title: 'Sign in required',
+        description: `Sign in to save "${series.title}" to your tracking list.`,
+        type: 'error',
+      });
+      return;
+    }
+    const result = await updateListEntryAction({ seriesId: series.id, status });
+    if (!result.success) {
+      showToast({
+        title: 'Could not save to your list',
+        description: result.message || 'Something went wrong. Try again.',
+        type: 'error',
+      });
+      return;
+    }
+    setListStatus(status);
     const statusLabels: Record<ListStatus, string> = {
       watching: 'Watching',
       plan_to_watch: 'Plan to watch',
@@ -39,9 +59,26 @@ export function TitleActions({ series }: TitleActionsProps) {
     });
   };
 
-  const handleSaveRating = (score: number) => {
-    setUserRating(score);
+  const handleSaveRating = async (score: number) => {
     setRateDialogOpen(false);
+    if (!user) {
+      showToast({
+        title: 'Sign in required',
+        description: `Sign in to rate "${series.title}".`,
+        type: 'error',
+      });
+      return;
+    }
+    const result = await updateListEntryAction({ seriesId: series.id, score });
+    if (!result.success) {
+      showToast({
+        title: 'Could not save your rating',
+        description: result.message || 'Something went wrong. Try again.',
+        type: 'error',
+      });
+      return;
+    }
+    setUserRating(score);
     showToast({
       title: 'Rating recorded',
       description: `You rated "${series.title}" ${score}/10.`,

@@ -12,6 +12,8 @@ import {
   MatchedAliasInfo,
   UserReport,
   UserProfileData,
+  UserListEntry,
+  UserContribution,
   UserPreferences,
   Revision,
   PersonRole,
@@ -27,7 +29,6 @@ import {
   mockContributions,
   mockRevisions,
   mockRedirects,
-  MOCK_NOW,
 } from './mock';
 import { supabasePublic, isSupabaseConfigured, allowMockData } from './supabase-public';
 import { parseTitleParam, parsePersonParam } from '@/src/lib/urls';
@@ -94,6 +95,9 @@ function isPotentialUrl(str: string): boolean {
     s.includes('goodshort') ||
     s.includes('netshort') ||
     s.includes('flextv') ||
+    s.includes('kukufm') ||
+    s.includes('pocketsaga') ||
+    s.includes('winzogames') ||
     s.includes('tiktok.com')
   );
 }
@@ -143,7 +147,7 @@ export interface HomeFeedData {
 function getRelativeTimeString(dateStr: string): string {
   try {
     const past = new Date(dateStr).getTime();
-    const now = MOCK_NOW.getTime();
+    const now = Date.now();
     const diffHours = Math.max(1, Math.round((now - past) / (1000 * 60 * 60)));
 
     if (diffHours < 24) {
@@ -300,6 +304,23 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
       // query error, keep the full platform list.
       const { data: releaseSlugsData, error: homeRelError } =
         await supabasePublic.from('releases').select('platform_slug').limit(1000);
+
+      // Real per-language counts over public series. Fail-open: on a query
+      // error, counts stay undefined and the language list still renders.
+      const languageCounts: Record<string, number> = {};
+      const { data: languageRows, error: langError } = await supabasePublic
+        .from('series')
+        .select('original_language')
+        .eq('visibility', 'public')
+        .limit(1000);
+      if (langError) {
+        logDataError('getHomePageFeed: language counts', langError);
+      } else {
+        for (const row of languageRows || []) {
+          const code = (row as any).original_language || 'en';
+          languageCounts[code] = (languageCounts[code] || 0) + 1;
+        }
+      }
       if (homeRelError)
         logDataError('getHomePageFeed: releases query', homeRelError);
 
@@ -368,11 +389,12 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         }));
 
       const browseLanguages: BrowseLanguage[] = [
-        { code: 'en', label: 'English', nativeLabel: 'English' },
-        { code: 'zh', label: 'Chinese', nativeLabel: '中文' },
-        { code: 'ko', label: 'Korean', nativeLabel: '한국어' },
-        { code: 'es', label: 'Spanish', nativeLabel: 'Español' },
-        { code: 'ja', label: 'Japanese', nativeLabel: '日本語' },
+        { code: 'en', label: 'English', nativeLabel: 'English', count: languageCounts['en'] || undefined },
+        { code: 'zh', label: 'Chinese', nativeLabel: '中文', count: languageCounts['zh'] || undefined },
+        { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: languageCounts['ko'] || undefined },
+        { code: 'es', label: 'Spanish', nativeLabel: 'Español', count: languageCounts['es'] || undefined },
+        { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: languageCounts['ja'] || undefined },
+        { code: 'hi', label: 'Hindi', nativeLabel: 'हिन्दी', count: languageCounts['hi'] || undefined },
       ];
 
       const platformsWithReleases = homeRelError
@@ -440,6 +462,7 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
     { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: languageCounts['ko'] || undefined },
     { code: 'es', label: 'Spanish', nativeLabel: 'Español', count: languageCounts['es'] || undefined },
     { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: languageCounts['ja'] || undefined },
+    { code: 'hi', label: 'Hindi', nativeLabel: 'हिन्दी', count: languageCounts['hi'] || undefined },
   ];
 
   return {
@@ -980,9 +1003,7 @@ export async function lookupLink(
 
   if (isSupabaseConfigured) {
     try {
-      const { data, error } = await supabasePublic
-        .from('releases')
-        .select(`
+      const selectClause = `
           id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, monetization_type, free_episodes, coins_per_episode, estimated_unlock_cost_usd, direct_watch_url, platforms(name),
           series:series_id(
             id, short_id, slug, title, romanized_title, original_language, origin_country,
@@ -993,10 +1014,21 @@ export async function lookupLink(
             series_tags(tag_slug, tags(slug, name)),
             series_people(role_type, character_name, people(id, short_id, slug, name, native_name))
           )
-        `)
-        .ilike('url', `%${cleanUrl}%`)
-        .limit(1)
-        .single();
+        `;
+      // Match against BOTH url and direct_watch_url: a pasted link may be
+      // either column. Two queries avoid PostgREST .or() parsing issues
+      // with commas inside pasted URLs.
+      const runLookup = (column: 'url' | 'direct_watch_url') =>
+        supabasePublic
+          .from('releases')
+          .select(selectClause)
+          .ilike(column, `%${cleanUrl}%`)
+          .limit(1)
+          .single();
+      let { data, error } = await runLookup('url');
+      if (error || !data) {
+        ({ data, error } = await runLookup('direct_watch_url'));
+      }
 
       const rawSeries: any = (data as any)?.series;
       const seriesObj = Array.isArray(rawSeries) ? rawSeries[0] : rawSeries;
@@ -1386,15 +1418,97 @@ export async function getUserProfileData(
         joinedAt: profile.created_at ? String(profile.created_at).split('T')[0] : '2024-01-01',
       };
 
+      const { data: entryRows, error: entryError } = await supabasePublic
+        .from('list_entries')
+        .select('status, score, episodes_watched, updated_at, series:series_id(id, short_id, slug, title, year, episode_count, poster_url, original_language, visibility, production_type, verification_status, studio_name, has_human_cast, rating_score, rating_count)')
+        .eq('user_id', profile.id)
+        .order('updated_at', { ascending: false });
+      if (entryError) logDataError('getUserProfileData: list_entries', entryError);
+
+      const listEntries = (entryRows || [])
+        .map((e: any) => {
+          const raw = e.series;
+          const row = Array.isArray(raw) ? raw[0] : raw;
+          if (!row) return null;
+          const series: Series = {
+            id: Number(row.id),
+            shortId: row.short_id,
+            slug: row.slug,
+            title: row.title,
+            posterUrl: row.poster_url || undefined,
+            originalLanguage: row.original_language || 'en',
+            year: row.year,
+            episodeCount: row.episode_count,
+            synopsis: '',
+            updatedAt: '2024-01-01',
+            visibility: row.visibility,
+            productionType: row.production_type || 'live_action',
+            verificationStatus: row.verification_status || 'unverified',
+            studioName: row.studio_name || null,
+            hasHumanCast: row.has_human_cast ?? true,
+            ratingScore: Number(row.rating_score || 0),
+            ratingCount: row.rating_count || 0,
+            tags: [],
+            aliases: [],
+            releases: [],
+            cast: [],
+          };
+          return {
+            userId: profile.id,
+            seriesId: Number(row.id),
+            status: e.status,
+            score: e.score ?? undefined,
+            episodesWatched: e.episodes_watched ?? 0,
+            updatedAt: e.updated_at ? String(e.updated_at).split('T')[0] : '2024-01-01',
+            series,
+          };
+        })
+        .filter(Boolean) as (UserListEntry & { series: Series })[];
+
+      const { data: aliasRows, error: aliasError } = await supabasePublic
+        .from('aliases')
+        .select('id, text, language, status, added_at, series:series_id(id, short_id, slug, title)')
+        .eq('added_by', profile.id)
+        .order('added_at', { ascending: false });
+      if (aliasError) logDataError('getUserProfileData: aliases', aliasError);
+
+      const contributions: UserContribution[] = (aliasRows || [])
+        .map((a: any) => {
+          const raw = a.series;
+          const row = Array.isArray(raw) ? raw[0] : raw;
+          if (!row) return null;
+          return {
+            id: String(a.id),
+            userId: profile.id,
+            seriesId: Number(row.id),
+            seriesShortId: row.short_id,
+            seriesSlug: row.slug,
+            seriesTitle: row.title,
+            type: 'alias' as const,
+            description: a.text,
+            date: a.added_at ? String(a.added_at).split('T')[0] : '2024-01-01',
+            status: a.status || 'pending',
+          };
+        })
+        .filter(Boolean) as UserContribution[];
+
+      const { data: reportRows, error: reportError } = await supabasePublic
+        .from('reports')
+        .select('*, series:series_id(title)')
+        .eq('submitted_by', profile.id)
+        .order('created_at', { ascending: false });
+      if (reportError) logDataError('getUserProfileData: reports', reportError);
+      const reports: UserReport[] = (reportRows || []).map(mapReportRecord);
+
       return {
         user,
-        titlesListedCount: 0,
-        namesAddedCount: 0,
-        reportsAcceptedCount: 0,
-        listEntries: [],
-        ratings: [],
-        contributions: [],
-        reports: [],
+        titlesListedCount: listEntries.length,
+        namesAddedCount: contributions.length,
+        reportsAcceptedCount: reports.filter((r) => r.status === 'accepted').length,
+        listEntries,
+        ratings: listEntries.filter((e) => typeof e.score === 'number'),
+        contributions,
+        reports,
       };
     } catch (error) {
       logDataError('repository', error);
@@ -1512,6 +1626,41 @@ export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> 
   return revs;
 }
 
+const REPORT_TYPE_NAMES: Record<string, string> = {
+  another_name: 'Another name',
+  wrong_name: 'Wrong name',
+  same_drama: 'Same drama',
+  not_same_drama: 'Not same drama',
+  wrong_details: 'Wrong details',
+  broken_link: 'Broken link',
+  other: 'Other',
+};
+
+/**
+ * Maps a public.reports row to the app's UserReport shape using the real
+ * columns (type, submitted_by, data jsonb) — not legacy column names.
+ */
+function mapReportRecord(r: any): UserReport {
+  const rawSeries = r.series;
+  const seriesRow = Array.isArray(rawSeries) ? rawSeries[0] : rawSeries;
+  return {
+    id: String(r.id),
+    type: (r.type as UserReport['type']) || 'wrong_details',
+    typeName: REPORT_TYPE_NAMES[r.type] || 'Report',
+    seriesId: Number(r.series_id),
+    seriesTitle: seriesRow?.title || 'Drama',
+    status: r.status || 'open',
+    submittedBy: r.submitted_by || 'usr_anon',
+    submittedAt: r.created_at ? String(r.created_at).split('T')[0] : '2024-01-01',
+    moderatorNote: r.moderator_note,
+    data: {
+      name: r.data?.name,
+      url: r.data?.url,
+      note: r.data?.note,
+    },
+  };
+}
+
 /**
  * Gets all pending/open moderation reports for the mod queue
  */
@@ -1522,29 +1671,14 @@ export async function getAllModerationReports(): Promise<UserReport[]> {
     try {
       const { data, error } = await supabasePublic
         .from('reports')
-        .select('*')
+        .select('*, series:series_id(title)')
         .eq('status', 'open')
         .order('created_at', { ascending: false });
 
       if (error) logDataError('repository', error);
       if (error || !data) return [];
 
-      return data.map((r: any) => ({
-        id: String(r.id),
-        type: r.report_type || 'another_name',
-        typeName: r.report_type_name || 'Report',
-        seriesId: Number(r.series_id),
-        seriesTitle: r.series_title || 'Drama',
-        status: r.status || 'open',
-        submittedBy: r.user_id || 'usr_anon',
-        submittedAt: r.created_at ? String(r.created_at).split('T')[0] : '2024-01-01',
-        moderatorNote: r.moderator_note,
-        data: {
-          name: r.proposed_value,
-          url: r.source_url,
-          note: r.notes,
-        },
-      }));
+      return data.map(mapReportRecord);
     } catch (error) {
       logDataError('repository', error);
       return [];
@@ -1636,6 +1770,12 @@ const PLATFORM_DESCRIPTIONS: Record<string, string> = {
     'FlexTV is a short drama streaming service featuring romantic sagas, urban fantasy, and high-frequency episodic releases.',
   'youtube':
     'Official and publisher-licensed YouTube channel releases for short drama series, pilot episodes, and complete compilation playlists.',
+  'kuku-tv':
+    'Kuku TV is the Hindi vertical-drama arm of Kuku FM, publishing Hindi-language short dramas and micro-series on YouTube, including full-episode compilations.',
+  'pocket-saga':
+    'Pocket Saga is Pocket FM\'s vertical-drama brand, publishing English short dramas as YouTube playlist series with short episodes and big drama.',
+  'zo-tv':
+    'ZO TV by WinZO publishes Hindi single-episode short dramas on YouTube, covering romance, revenge, and family stories.',
 };
 
 const TAG_DESCRIPTIONS: Record<string, string> = {

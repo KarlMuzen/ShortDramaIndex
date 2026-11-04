@@ -387,6 +387,7 @@ export function ReportSheet({
                     { value: 'th', label: 'Thai' },
                     { value: 'vi', label: 'Vietnamese' },
                     { value: 'id', label: 'Indonesian' },
+                    { value: 'hi', label: 'Hindi (हिन्दी)' },
                   ]}
                 />
                 <TextField
