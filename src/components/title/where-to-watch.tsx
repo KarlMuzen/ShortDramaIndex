@@ -90,6 +90,38 @@ export function WhereToWatch({ series }: WhereToWatchProps) {
             </p>
           )}
 
+          {/* Monetization: never render 0 or blank as a fact; null means unverified */}
+          {release.monetizationType ? (
+            <p className="text-[13px] text-[var(--muted)]">
+              {[
+                release.freeEpisodes != null
+                  ? `First ${release.freeEpisodes} eps free`
+                  : null,
+                release.monetizationType === 'coin_per_episode'
+                  ? 'Coin unlock'
+                  : release.monetizationType === 'subscription'
+                    ? 'Subscription'
+                    : release.monetizationType === 'ad_supported'
+                      ? 'Ad-supported'
+                      : release.monetizationType === 'free_with_ads'
+                        ? 'Free with ads'
+                        : 'Hybrid',
+                release.estimatedUnlockCostUsd != null
+                  ? `~$${Number(release.estimatedUnlockCostUsd).toFixed(2)} full series`
+                  : null,
+                release.coinsPerEpisode != null
+                  ? `${release.coinsPerEpisode} coins/ep`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' • ')}
+            </p>
+          ) : (
+            <p className="text-[13px] text-[var(--muted)]">
+              Monetization details unverified
+            </p>
+          )}
+
           {/* Region as plain text + Last checked */}
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-[var(--muted)] tabular-nums">
             <span>Region: {release.region}</span>
@@ -119,7 +151,7 @@ export function WhereToWatch({ series }: WhereToWatchProps) {
           </Button>
 
           <a
-            href={release.url}
+            href={release.directWatchUrl || release.url}
             target="_blank"
             rel="noreferrer noopener"
             className="inline-flex items-center justify-center font-medium rounded-[8px] h-9 px-3.5 text-[13px] gap-1.5 bg-[var(--surface)] text-[var(--ink)] border border-[var(--line)] hover:bg-[var(--surface-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--crimson)]"

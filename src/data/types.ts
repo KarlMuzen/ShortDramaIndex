@@ -5,6 +5,18 @@ export type UserRole = 'reader' | 'editor' | 'moderator';
 export type ListStatus = 'watching' | 'plan_to_watch' | 'completed' | 'dropped' | 'on_hold';
 export type PersonRoleType = 'actor' | 'director' | 'writer' | 'producer';
 export type ProductionStatus = 'completed' | 'ongoing';
+export type SeriesProductionType = 'live_action' | 'hybrid' | 'animation' | 'ai_assisted';
+export type SeriesVerificationStatus =
+  | 'verified_commercial'
+  | 'editorial_approved'
+  | 'community_submitted'
+  | 'unverified';
+export type MonetizationType =
+  | 'coin_per_episode'
+  | 'subscription'
+  | 'ad_supported'
+  | 'free_with_ads'
+  | 'hybrid';
 
 export type ReportType =
   | 'another_name'
@@ -50,6 +62,11 @@ export interface Release {
   lastChecked: string;
   linkStatus: LinkStatus;
   isOfficial: boolean;
+  monetizationType: MonetizationType | null;
+  freeEpisodes: number | null;
+  coinsPerEpisode: number | null;
+  estimatedUnlockCostUsd: number | null;
+  directWatchUrl: string | null;
   notes?: string;
 }
 
@@ -92,6 +109,10 @@ export interface Series {
   updatedAt: string;
   visibility: VisibilityStatus;
   productionStatus?: ProductionStatus;
+  productionType: SeriesProductionType;
+  verificationStatus: SeriesVerificationStatus;
+  studioName: string | null;
+  hasHumanCast: boolean;
   ratingScore: number;
   ratingCount: number;
   rank?: number;

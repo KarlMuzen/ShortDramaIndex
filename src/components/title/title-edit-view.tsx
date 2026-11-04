@@ -109,6 +109,11 @@ function TitleEditContent({
       lastChecked: 'Today',
       linkStatus: 'active',
       isOfficial: true,
+      monetizationType: null,
+      freeEpisodes: null,
+      coinsPerEpisode: null,
+      estimatedUnlockCostUsd: null,
+      directWatchUrl: null,
     };
     setReleases([...releases, newRel]);
     setNewRelUrl('');

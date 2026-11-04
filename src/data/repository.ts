@@ -197,6 +197,11 @@ function mapSeriesRecord(row: any): Series {
         lastChecked: r.last_checked ? String(r.last_checked).split('T')[0] : '',
         linkStatus: r.link_status || 'active',
         isOfficial: Boolean(r.is_official),
+        monetizationType: r.monetization_type || null,
+        freeEpisodes: r.free_episodes ?? null,
+        coinsPerEpisode: r.coins_per_episode ?? null,
+        estimatedUnlockCostUsd: r.estimated_unlock_cost_usd != null ? Number(r.estimated_unlock_cost_usd) : null,
+        directWatchUrl: r.direct_watch_url || null,
       }))
     : [];
 
@@ -241,6 +246,10 @@ function mapSeriesRecord(row: any): Series {
     updatedAt: row.updated_at ? String(row.updated_at).split('T')[0] : '2024-01-01',
     visibility: row.visibility || 'public',
     productionStatus: row.production_status || 'completed',
+    productionType: row.production_type || 'live_action',
+    verificationStatus: row.verification_status || 'unverified',
+    studioName: row.studio_name || null,
+    hasHumanCast: row.has_human_cast ?? true,
     ratingScore: Number(row.rating_score || 0),
     ratingCount: Number(row.rating_count || 0),
     popularity: Number(row.list_count || 0) * 10 + Number(row.rating_count || 0),
@@ -265,7 +274,7 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
     try {
       const { data: popularData, error: popError } = await supabasePublic
         .from('series')
-        .select('id, short_id, slug, title, year, episode_count, poster_url, rating_score, original_language, visibility, list_count, rating_count')
+        .select('id, short_id, slug, title, year, episode_count, poster_url, rating_score, original_language, visibility, list_count, rating_count, production_type, verification_status, studio_name, has_human_cast')
         .eq('visibility', 'public')
         .order('list_count', { ascending: false })
         .limit(6);
@@ -314,6 +323,10 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         synopsis: '',
         updatedAt: '2024-01-01',
         visibility: p.visibility,
+        productionType: p.production_type || 'live_action',
+        verificationStatus: p.verification_status || 'unverified',
+        studioName: p.studio_name || null,
+        hasHumanCast: p.has_human_cast ?? true,
         ratingScore: Number(p.rating_score || 0),
         ratingCount: p.rating_count || 0,
         tags: [],
@@ -601,6 +614,10 @@ export async function searchSeries(params: {
           synopsis: row.synopsis || '',
           updatedAt: '2024-01-01',
           visibility: 'public',
+          productionType: row.production_type || 'live_action',
+          verificationStatus: row.verification_status || 'unverified',
+          studioName: row.studio_name || null,
+          hasHumanCast: row.has_human_cast ?? true,
           ratingScore: Number(row.rating_score || 0),
           ratingCount: Number(row.rating_count || 0),
           popularity: Number(row.list_count || 0) * 10 + Number(row.rating_count || 0),
@@ -849,9 +866,9 @@ export async function getSeriesById(idOrShortId: number | string): Promise<Serie
         .select(`
           id, short_id, slug, title, romanized_title, original_language, origin_country,
           year, episode_count, avg_episode_minutes, synopsis, poster_url,
-          production_status, visibility, rating_score, rating_count, list_count, updated_at,
+          production_status, production_type, verification_status, studio_name, has_human_cast, visibility, rating_score, rating_count, list_count, updated_at,
           aliases(id, text, language, script, source_url, source_label, status, added_by, added_at),
-          releases(id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, platforms(name)),
+          releases(id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, monetization_type, free_episodes, coins_per_episode, estimated_unlock_cost_usd, direct_watch_url, platforms(name)),
           series_tags(tag_slug, tags(slug, name)),
           series_people(role_type, character_name, people(id, short_id, slug, name, native_name))
         `);
@@ -905,7 +922,7 @@ export async function getRelatedSeries(
 
       const { data, error } = await supabasePublic
         .from('series_tags')
-        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at, production_type, verification_status, studio_name, has_human_cast)')
         .in('tag_slug', tagSlugs)
         .neq('series_id', id)
         .limit(limit);
@@ -950,13 +967,13 @@ export async function lookupLink(
       const { data, error } = await supabasePublic
         .from('releases')
         .select(`
-          id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, platforms(name),
+          id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, monetization_type, free_episodes, coins_per_episode, estimated_unlock_cost_usd, direct_watch_url, platforms(name),
           series:series_id(
             id, short_id, slug, title, romanized_title, original_language, origin_country,
             year, episode_count, avg_episode_minutes, synopsis, poster_url,
-            production_status, visibility, rating_score, rating_count, list_count, updated_at,
+            production_status, production_type, verification_status, studio_name, has_human_cast, visibility, rating_score, rating_count, list_count, updated_at,
             aliases(id, text, language, script, source_url, source_label, status, added_by, added_at),
-            releases(id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, platforms(name)),
+            releases(id, platform_slug, region, dub_language, subtitle_languages, episode_count, url, released_year, last_checked, link_status, is_official, monetization_type, free_episodes, coins_per_episode, estimated_unlock_cost_usd, direct_watch_url, platforms(name)),
             series_tags(tag_slug, tags(slug, name)),
             series_people(role_type, character_name, people(id, short_id, slug, name, native_name))
           )
@@ -987,6 +1004,11 @@ export async function lookupLink(
         lastChecked: releaseData.last_checked ? String(releaseData.last_checked).split('T')[0] : '',
         linkStatus: releaseData.link_status || 'active',
         isOfficial: Boolean(releaseData.is_official),
+        monetizationType: releaseData.monetization_type || null,
+        freeEpisodes: releaseData.free_episodes ?? null,
+        coinsPerEpisode: releaseData.coins_per_episode ?? null,
+        estimatedUnlockCostUsd: releaseData.estimated_unlock_cost_usd != null ? Number(releaseData.estimated_unlock_cost_usd) : null,
+        directWatchUrl: releaseData.direct_watch_url || null,
       };
 
       return { series, release };
@@ -1033,7 +1055,7 @@ export async function getTag(
 
       const { data: seriesData } = await supabasePublic
         .from('series_tags')
-        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at, production_type, verification_status, studio_name, has_human_cast)')
         .eq('tag_slug', slug);
 
       const series = (seriesData || [])
@@ -1081,7 +1103,7 @@ export async function getPlatform(
 
       const { data: releaseData } = await supabasePublic
         .from('releases')
-        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)')
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at, production_type, verification_status, studio_name, has_human_cast)')
         .eq('platform_slug', slug);
 
       const series = (releaseData || [])
@@ -1135,7 +1157,7 @@ export async function getAllSeries(): Promise<Series[]> {
         const to = Math.min(from + batchSize - 1, maxRows - 1);
         const { data, error } = await supabasePublic
           .from('series')
-          .select('id, short_id, slug, title, updated_at, visibility, synopsis')
+          .select('id, short_id, slug, title, updated_at, visibility, synopsis, production_type, verification_status, studio_name, has_human_cast')
           .eq('visibility', 'public')
           .range(from, to);
 
@@ -1162,6 +1184,10 @@ export async function getAllSeries(): Promise<Series[]> {
           synopsis: s.synopsis || '',
           updatedAt: s.updated_at ? String(s.updated_at).split('T')[0] : '2024-01-01',
           visibility: s.visibility,
+          productionType: s.production_type || 'live_action',
+          verificationStatus: s.verification_status || 'unverified',
+          studioName: s.studio_name || null,
+          hasHumanCast: s.has_human_cast ?? true,
           ratingScore: 0,
           ratingCount: 0,
           tags: [],
@@ -1679,7 +1705,7 @@ export async function getSeriesByPlatform(
 
       const { data, count, error } = await supabasePublic
         .from('releases')
-        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)', { count: 'exact' })
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at, production_type, verification_status, studio_name, has_human_cast)', { count: 'exact' })
         .eq('platform_slug', platformSlug)
         .range(from, to);
 
@@ -1825,7 +1851,7 @@ export async function getSeriesByTag(
 
       const { data, count, error } = await supabasePublic
         .from('series_tags')
-        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at)', { count: 'exact' })
+        .select('series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, list_count, rating_score, rating_count, updated_at, production_type, verification_status, studio_name, has_human_cast)', { count: 'exact' })
         .eq('tag_slug', tagSlug)
         .range(from, to);
 
@@ -1922,7 +1948,7 @@ export async function getPersonByIdOrSlug(
           id, short_id, slug, name, native_name,
           series_people(
             character_name, role_type,
-            series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, rating_score, rating_count, list_count)
+            series:series_id(id, short_id, slug, title, year, episode_count, poster_url, visibility, rating_score, rating_count, list_count, production_type, verification_status, studio_name, has_human_cast)
           )
         `)
         .eq('short_id', shortId)

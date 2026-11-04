@@ -225,8 +225,33 @@ export default async function TitlePage({ params }: TitlePageProps) {
             )}
           </div>
 
+          {/* Editorial verification badge */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {series.verificationStatus === 'verified_commercial' && (
+              <span className="inline-flex items-center rounded-full border border-[var(--status-verified)]/30 bg-[var(--status-verified-bg)] px-2.5 py-0.5 text-[12px] font-semibold text-[var(--status-verified)]">
+                Verified Studio Production
+              </span>
+            )}
+            {series.verificationStatus === 'editorial_approved' && (
+              <span className="inline-flex items-center rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-0.5 text-[12px] font-semibold text-[#1D4ED8]">
+                Editorial Approved
+              </span>
+            )}
+            {series.verificationStatus === 'community_submitted' && (
+              <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[var(--surface-subtle)] px-2.5 py-0.5 text-[12px] font-medium text-[var(--muted)]">
+                Community Submitted
+              </span>
+            )}
+            {series.verificationStatus === 'unverified' && (
+              <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[var(--surface-subtle)] px-2.5 py-0.5 text-[12px] font-medium text-[var(--muted)]">
+                Verification Pending
+              </span>
+            )}
+          </div>
+
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[var(--muted)] tabular-nums pt-1 border-t border-[var(--line)]">
             <span className="font-semibold text-[var(--ink)]">{series.year}</span>
+            {series.studioName && <span>{series.studioName}</span>}
             {originCountryName && <span>{originCountryName}</span>}
             {series.originalLanguage === 'en' ? (
               <span className="font-medium text-[var(--status-verified)]">Original English</span>

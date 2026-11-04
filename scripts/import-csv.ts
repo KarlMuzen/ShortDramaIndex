@@ -17,6 +17,15 @@ interface CsvRow {
   poster_url?: string;
   tags?: string;
   cast?: string;
+  production_type?: string;
+  verification_status?: string;
+  studio_name?: string;
+  has_human_cast?: string;
+  monetization_type?: string;
+  free_episodes?: string;
+  coins_per_episode?: string;
+  estimated_unlock_cost_usd?: string;
+  direct_watch_url?: string;
 }
 
 const KNOWN_PLATFORMS: Record<string, { name: string; url: string }> = {
@@ -137,6 +146,15 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
     'poster_url',
     'tags',
     'cast',
+    'production_type',
+    'verification_status',
+    'studio_name',
+    'has_human_cast',
+    'monetization_type',
+    'free_episodes',
+    'coins_per_episode',
+    'estimated_unlock_cost_usd',
+    'direct_watch_url',
   ];
 
   console.log(`Starting CSV import ${isDryRun ? '(DRY RUN)' : ''}...`);
@@ -245,6 +263,57 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
       }
     }
 
+    // 11b. Editorial verification & monetization (all optional; blank means "leave as-is / unknown", never a guessed value)
+    const PRODUCTION_TYPES = ['live_action', 'hybrid', 'animation', 'ai_assisted'];
+    const VERIFICATION_STATUSES = ['verified_commercial', 'editorial_approved', 'community_submitted', 'unverified'];
+    const MONETIZATION_TYPES = ['coin_per_episode', 'subscription', 'ad_supported', 'free_with_ads', 'hybrid'];
+    const parseOptionalInt = (value: string | undefined, field: string): number | undefined => {
+      if (!value || !value.trim()) return undefined;
+      const n = parseInt(value.trim(), 10);
+      if (isNaN(n) || n < 0) rowErrors.push(`${field} must be an integer >= 0 (got "${value}")`);
+      return n;
+    };
+    const parseOptionalNumber = (value: string | undefined, field: string): number | undefined => {
+      if (!value || !value.trim()) return undefined;
+      const n = parseFloat(value.trim());
+      if (isNaN(n) || n < 0) rowErrors.push(`${field} must be a number >= 0 (got "${value}")`);
+      return n;
+    };
+    let hasHumanCast: boolean | undefined;
+    if (row.has_human_cast && row.has_human_cast.trim()) {
+      const v = row.has_human_cast.trim().toLowerCase();
+      if (['true', '1', 'yes'].includes(v)) hasHumanCast = true;
+      else if (['false', '0', 'no'].includes(v)) hasHumanCast = false;
+      else rowErrors.push(`has_human_cast must be true/false (got "${row.has_human_cast}")`);
+    }
+    if (row.production_type && !PRODUCTION_TYPES.includes(row.production_type.trim())) {
+      rowErrors.push(`production_type must be one of ${PRODUCTION_TYPES.join(', ')} (got "${row.production_type}")`);
+    }
+    if (row.verification_status && !VERIFICATION_STATUSES.includes(row.verification_status.trim())) {
+      rowErrors.push(`verification_status must be one of ${VERIFICATION_STATUSES.join(', ')} (got "${row.verification_status}")`);
+    }
+    if (row.monetization_type && !MONETIZATION_TYPES.includes(row.monetization_type.trim())) {
+      rowErrors.push(`monetization_type must be one of ${MONETIZATION_TYPES.join(', ')} (got "${row.monetization_type}")`);
+    }
+    const freeEpisodes = parseOptionalInt(row.free_episodes, 'free_episodes');
+    const coinsPerEpisode = parseOptionalInt(row.coins_per_episode, 'coins_per_episode');
+    const estimatedUnlockCostUsd = parseOptionalNumber(row.estimated_unlock_cost_usd, 'estimated_unlock_cost_usd');
+    if (row.direct_watch_url && !isValidHttpUrl(row.direct_watch_url)) {
+      rowErrors.push('direct_watch_url must be a valid http:// or https:// URL');
+    }
+    // Only fields the CSV actually provides are written; omitted fields keep their existing DB value on update.
+    const seriesOptionalFields: Record<string, unknown> = {};
+    if (row.production_type?.trim()) seriesOptionalFields.production_type = row.production_type.trim();
+    if (row.verification_status?.trim()) seriesOptionalFields.verification_status = row.verification_status.trim();
+    if (row.studio_name?.trim()) seriesOptionalFields.studio_name = row.studio_name.trim();
+    if (hasHumanCast !== undefined) seriesOptionalFields.has_human_cast = hasHumanCast;
+    const releaseOptionalFields: Record<string, unknown> = {};
+    if (row.monetization_type?.trim()) releaseOptionalFields.monetization_type = row.monetization_type.trim();
+    if (freeEpisodes !== undefined) releaseOptionalFields.free_episodes = freeEpisodes;
+    if (coinsPerEpisode !== undefined) releaseOptionalFields.coins_per_episode = coinsPerEpisode;
+    if (estimatedUnlockCostUsd !== undefined) releaseOptionalFields.estimated_unlock_cost_usd = estimatedUnlockCostUsd;
+    if (row.direct_watch_url?.trim()) releaseOptionalFields.direct_watch_url = row.direct_watch_url.trim();
+
     // 11. Tags validation (optional, pipe-separated tag names)
     const tagEntries: { slug: string; name: string }[] = [];
     if (row.tags && row.tags.trim()) {
@@ -296,6 +365,7 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
               poster_url: row.poster_url || null,
               production_status: 'completed',
               visibility: isPublic ? 'public' : 'hidden',
+              ...seriesOptionalFields,
             })
             .eq('id', existingSeries.id);
           if (updateError) {
@@ -320,6 +390,7 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
               poster_url: row.poster_url || null,
               production_status: 'completed',
               visibility: isPublic ? 'public' : 'hidden', // Imported as hidden for moderator review unless --public is passed
+              ...seriesOptionalFields,
             })
             .select('id')
             .single();
@@ -425,7 +496,11 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
               url: row.release_url,
               is_official: true,
               region: 'Global',
+              ...releaseOptionalFields,
             });
+          } else if (Object.keys(releaseOptionalFields).length > 0) {
+            // Idempotent update: a re-import with monetization columns refreshes them instead of duplicating the release.
+            await supabase.from('releases').update(releaseOptionalFields).eq('id', existingRelease.id);
           }
         }
 
