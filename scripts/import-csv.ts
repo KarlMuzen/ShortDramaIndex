@@ -37,6 +37,8 @@ const KNOWN_PLATFORMS: Record<string, { name: string; url: string }> = {
   netshort: { name: 'NetShort', url: 'https://www.netshort.com' },
   flextv: { name: 'FlexTV', url: 'https://www.flextv.cc' },
   youtube: { name: 'YouTube', url: 'https://www.youtube.com' },
+  'kuku-tv': { name: 'Kuku TV', url: 'https://kukufm.com' },
+  'zo-tv': { name: 'ZO TV', url: 'https://www.winzogames.com' },
 };
 
 function platformNameForSlug(slug: string): string {
@@ -111,9 +113,31 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
     process.exit(1);
   }
 
+  // New-format Supabase secret keys (sb_secret_*) are not JWTs, so sending
+  // one as an Authorization Bearer token makes PostgREST reject every call
+  // with "Expected 3 parts in JWT". For non-JWT keys, strip Authorization
+  // in a custom fetch and authenticate with the apikey header only — the
+  // same pattern the working REST importer uses. Legacy JWT keys (three
+  // dot-separated parts) keep the default client behaviour. The check is
+  // on JWT shape, not the sb_secret_ prefix, because connector surrogates
+  // (hsurr:*) stand in for the real secret locally and must take the same
+  // apikey-only path.
+  const useApikeyOnly = (serviceRoleKey || '').split('.').length !== 3;
   const supabase = (!isDryRun && supabaseUrl && serviceRoleKey)
     ? createClient(supabaseUrl, serviceRoleKey, {
         auth: { persistSession: false, autoRefreshToken: false },
+        ...(useApikeyOnly
+          ? {
+              global: {
+                fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+                  const headers = new Headers(init?.headers);
+                  headers.delete('Authorization');
+                  headers.set('apikey', serviceRoleKey);
+                  return fetch(input, { ...init, headers });
+                },
+              },
+            }
+          : {}),
       })
     : null;
 
