@@ -426,6 +426,7 @@ export async function deleteAccountAction(): Promise<{ success: boolean }> {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await supabase.from('profiles').delete().eq('id', user.id);
+      await supabase.rpc('delete_my_account');
       await supabase.auth.signOut();
     }
   } catch {
@@ -680,6 +681,15 @@ export async function resolveModerationReportAction(params: {
       return { success: false };
     }
     if (!authData.user) return { success: false };
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', authData.user.id)
+      .single();
+    if (profileError || !profile || profile.role !== 'moderator') {
+      return { success: false };
+    }
 
     const { data: report, error: reportError } = await supabase
       .from('reports')

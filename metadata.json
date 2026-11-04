@@ -1,6 +1,0 @@
-{
-  "name": "ShortDramaIndex",
-  "description": "The reference database for short dramas. Discover aliases, official where-to-watch links, community ratings, and verified catalog data.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
