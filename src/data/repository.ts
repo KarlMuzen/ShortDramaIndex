@@ -276,43 +276,49 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
   }
   if (isSupabaseConfigured) {
     try {
-      const { data: popularData, error: popError } = await supabasePublic
-        .from('series')
-        .select('id, short_id, slug, title, year, episode_count, poster_url, rating_score, original_language, visibility, list_count, rating_count, production_type, verification_status, studio_name, has_human_cast')
-        .eq('visibility', 'public')
-        .order('list_count', { ascending: false })
-        .limit(6);
+      // The six homepage queries are independent, so run them in parallel
+      // instead of six sequential network round-trips.
+      const [
+        { data: popularData, error: popError },
+        { data: aliasData, error: aliasError },
+        { data: tagsData, error: tagsError },
+        { data: platformsData, error: platError },
+        { data: releaseSlugsData, error: homeRelError },
+        { data: languageRows, error: langError },
+      ] = await Promise.all([
+        supabasePublic
+          .from('series')
+          .select('id, short_id, slug, title, year, episode_count, poster_url, rating_score, original_language, visibility, list_count, rating_count, production_type, verification_status, studio_name, has_human_cast')
+          .eq('visibility', 'public')
+          .order('list_count', { ascending: false })
+          .limit(6),
+        supabasePublic
+          .from('aliases')
+          .select('text, language, source_url, source_label, status, added_at, series:series_id(id, short_id, slug, title, visibility)')
+          .order('added_at', { ascending: false })
+          .limit(7),
+        supabasePublic
+          .from('tags')
+          .select('slug, name')
+          .limit(8),
+        supabasePublic
+          .from('platforms')
+          .select('slug, name, url, is_official')
+          .limit(50),
+        // Slugs that actually have releases, for hiding empty platforms
+        // from the homepage "Browse by platform" section. Fail-open: on a
+        // query error, keep the full platform list.
+        supabasePublic.from('releases').select('platform_slug').limit(1000),
+        // Real per-language counts over public series. Fail-open: on a query
+        // error, counts stay undefined and the language list still renders.
+        supabasePublic
+          .from('series')
+          .select('original_language')
+          .eq('visibility', 'public')
+          .limit(1000),
+      ]);
 
-      const { data: aliasData, error: aliasError } = await supabasePublic
-        .from('aliases')
-        .select('text, language, source_url, source_label, status, added_at, series:series_id(id, short_id, slug, title, visibility)')
-        .order('added_at', { ascending: false })
-        .limit(7);
-
-      const { data: tagsData, error: tagsError } = await supabasePublic
-        .from('tags')
-        .select('slug, name')
-        .limit(8);
-
-      const { data: platformsData, error: platError } = await supabasePublic
-        .from('platforms')
-        .select('slug, name, url, is_official')
-        .limit(50);
-
-      // Slugs that actually have releases, for hiding empty platforms
-      // from the homepage "Browse by platform" section. Fail-open: on a
-      // query error, keep the full platform list.
-      const { data: releaseSlugsData, error: homeRelError } =
-        await supabasePublic.from('releases').select('platform_slug').limit(1000);
-
-      // Real per-language counts over public series. Fail-open: on a query
-      // error, counts stay undefined and the language list still renders.
       const languageCounts: Record<string, number> = {};
-      const { data: languageRows, error: langError } = await supabasePublic
-        .from('series')
-        .select('original_language')
-        .eq('visibility', 'public')
-        .limit(1000);
       if (langError) {
         logDataError('getHomePageFeed: language counts', langError);
       } else {
@@ -968,10 +974,18 @@ export async function getRelatedSeries(
 
       if (error) logDataError('repository', error);
       if (error || !data) return [];
-      return data
+      // One row per shared tag: a drama sharing 2 tags with the current
+      // drama would otherwise be returned (and rendered) twice.
+      const seenIds = new Set<number>();
+      const unique = data
         .map((d: any) => d.series)
         .filter((s: any) => s && s.visibility === 'public')
-        .map((s: any) => mapSeriesRecord(s));
+        .filter((s: any) => {
+          if (seenIds.has(s.id)) return false;
+          seenIds.add(s.id);
+          return true;
+        });
+      return unique.map((s: any) => mapSeriesRecord(s));
     } catch (error) {
       logDataError('repository', error);
       return [];
@@ -1205,7 +1219,7 @@ export async function getAllSeries(): Promise<Series[]> {
         const to = Math.min(from + batchSize - 1, maxRows - 1);
         const { data, error } = await supabasePublic
           .from('series')
-          .select('id, short_id, slug, title, updated_at, visibility, synopsis, production_type, verification_status, studio_name, has_human_cast')
+          .select('id, short_id, slug, title, updated_at, visibility, synopsis, production_type, verification_status, studio_name, has_human_cast, original_language, year, episode_count')
           .eq('visibility', 'public')
           .range(from, to);
 
@@ -1226,9 +1240,9 @@ export async function getAllSeries(): Promise<Series[]> {
           shortId: s.short_id,
           slug: s.slug,
           title: s.title,
-          originalLanguage: 'zh',
-          year: 2024,
-          episodeCount: 80,
+          originalLanguage: s.original_language || 'en',
+          year: s.year,
+          episodeCount: s.episode_count,
           synopsis: s.synopsis || '',
           updatedAt: s.updated_at ? String(s.updated_at).split('T')[0] : '2024-01-01',
           visibility: s.visibility,
@@ -1403,7 +1417,7 @@ export async function getUserProfileData(
     try {
       const { data: profile, error } = await supabasePublic
         .from('profiles')
-        .select('id, handle, display_name, role, avatar_url, created_at')
+        .select('id, handle, display_name, role, avatar_url, joined_at')
         .eq('handle', clean)
         .single();
 
@@ -1415,7 +1429,7 @@ export async function getUserProfileData(
         handle: profile.handle,
         name: profile.display_name || profile.handle,
         role: (profile.role as any) || 'reader',
-        joinedAt: profile.created_at ? String(profile.created_at).split('T')[0] : '2024-01-01',
+        joinedAt: profile.joined_at ? String(profile.joined_at).split('T')[0] : '2024-01-01',
       };
 
       const { data: entryRows, error: entryError } = await supabasePublic
@@ -1575,7 +1589,7 @@ export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> 
     try {
       const { data, error } = await supabasePublic
         .from('revisions')
-        .select('*')
+        .select('id, series_id, summary, diffs, submitted_by, created_at, reverted, profiles:submitted_by(handle, display_name, role)')
         .eq('series_id', seriesId)
         .order('created_at', { ascending: false });
 
@@ -1584,17 +1598,21 @@ export async function getSeriesRevisions(seriesId: number): Promise<Revision[]> 
         return [];
       }
 
-      return data.map((r: any) => ({
-        id: String(r.id),
-        seriesId: Number(r.series_id),
-        summary: r.summary || 'Metadata edit',
-        diffs: Array.isArray(r.diffs) ? r.diffs : [],
-        submittedBy: r.user_id || 'usr_unknown',
-        submittedByName: r.user_name || 'Contributor',
-        submittedByRole: r.user_role || 'editor',
-        submittedAt: r.created_at ? String(r.created_at).split('T')[0] : '2024-01-01',
-        reverted: Boolean(r.reverted),
-      }));
+      return data.map((r: any) => {
+        const rawProfile = r.profiles;
+        const profile = Array.isArray(rawProfile) ? rawProfile[0] : rawProfile;
+        return {
+          id: String(r.id),
+          seriesId: Number(r.series_id),
+          summary: r.summary || 'Metadata edit',
+          diffs: Array.isArray(r.diffs) ? r.diffs : [],
+          submittedBy: r.submitted_by || 'usr_unknown',
+          submittedByName: profile?.display_name || profile?.handle || 'Contributor',
+          submittedByRole: profile?.role || 'editor',
+          submittedAt: r.created_at ? String(r.created_at).split('T')[0] : '2024-01-01',
+          reverted: Boolean(r.reverted),
+        };
+      });
     } catch (error) {
       logDataError('repository', error);
       return [];
@@ -1853,6 +1871,25 @@ export async function getPlatformBySlug(slug: string): Promise<{
 /**
  * Gets paginated series available on a platform
  */
+/**
+ * Applies the listing sort parameter to already-fetched items, using the
+ * same comparators as the mock fallback: popularity (list activity),
+ * newest (year), rating (ratingScore), title (alphabetical).
+ */
+function applySeriesSort(items: Series[], sort: string): Series[] {
+  const sorted = [...items];
+  if (sort === 'newest') {
+    sorted.sort((a, b) => b.year - a.year);
+  } else if (sort === 'rating') {
+    sorted.sort((a, b) => b.ratingScore - a.ratingScore);
+  } else if (sort === 'title') {
+    sorted.sort((a, b) => a.title.localeCompare(b.title));
+  } else {
+    sorted.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+  }
+  return sorted;
+}
+
 export async function getSeriesByPlatform(
   platformSlug: string,
   page = 1,
@@ -1894,10 +1931,13 @@ export async function getSeriesByPlatform(
         };
       }
 
-      const items = data
-        .map((d: any) => d.series)
-        .filter((s: any) => s && s.visibility === 'public')
-        .map((s: any) => mapSeriesRecord(s));
+      const items = applySeriesSort(
+        data
+          .map((d: any) => d.series)
+          .filter((s: any) => s && s.visibility === 'public')
+          .map((s: any) => mapSeriesRecord(s)),
+        sort
+      );
 
       return {
         items,
@@ -2040,10 +2080,13 @@ export async function getSeriesByTag(
         };
       }
 
-      const items = data
-        .map((d: any) => d.series)
-        .filter((s: any) => s && s.visibility === 'public')
-        .map((s: any) => mapSeriesRecord(s));
+      const items = applySeriesSort(
+        data
+          .map((d: any) => d.series)
+          .filter((s: any) => s && s.visibility === 'public')
+          .map((s: any) => mapSeriesRecord(s)),
+        sort
+      );
 
       return {
         items,

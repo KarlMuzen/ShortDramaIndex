@@ -120,9 +120,7 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
   // in a custom fetch and authenticate with the apikey header only — the
   // same pattern the working REST importer uses. Legacy JWT keys (three
   // dot-separated parts) keep the default client behaviour. The check is
-  // on JWT shape, not the sb_secret_ prefix, because connector surrogates
-  // (hsurr:*) stand in for the real secret locally and must take the same
-  // apikey-only path.
+  // on JWT shape, not the sb_secret_ prefix.
   const useApikeyOnly = (serviceRoleKey || '').split('.').length !== 3;
   const supabase = (!isDryRun && supabaseUrl && serviceRoleKey)
     ? createClient(supabaseUrl, serviceRoleKey, {
