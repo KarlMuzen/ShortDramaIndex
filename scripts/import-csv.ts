@@ -518,7 +518,11 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
           }
         }
 
-        // Insert release, ensuring the platform exists first, skipping any (series_id, url) release that already exists.
+        // Upsert release by (series_id, platform_slug), ensuring the platform exists first.
+        // If a release for that series+platform already exists, UPDATE its url (and the
+        // monetization/episode/direct-watch fields) in place, so changing a broken URL in the
+        // CSV never leaves an orphan 404 release row behind or creates a duplicate.
+        // (This catalog holds exactly one release per series per platform.)
         // A row with no release_url but a direct_watch_url (e.g. a platform homepage) still gets a release
         // row for that direct URL, so the supplied direct_watch_url is never silently dropped.
         const effectiveReleaseUrl = row.release_url || row.direct_watch_url;
@@ -535,7 +539,7 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
             .from('releases')
             .select('id')
             .eq('series_id', seriesId)
-            .eq('url', effectiveReleaseUrl)
+            .eq('platform_slug', row.platform_slug)
             .maybeSingle();
           if (!existingRelease) {
             await supabase.from('releases').insert({
@@ -546,9 +550,13 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
               region: 'Global',
               ...releaseOptionalFields,
             });
-          } else if (Object.keys(releaseOptionalFields).length > 0) {
-            // Idempotent update: a re-import with monetization columns refreshes them instead of duplicating the release.
-            await supabase.from('releases').update(releaseOptionalFields).eq('id', existingRelease.id);
+          } else {
+            // Idempotent update: a re-import refreshes the URL and monetization columns
+            // instead of duplicating the release.
+            await supabase.from('releases').update({
+              url: effectiveReleaseUrl,
+              ...releaseOptionalFields,
+            }).eq('id', existingRelease.id);
           }
         }
 
