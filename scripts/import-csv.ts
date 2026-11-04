@@ -238,9 +238,9 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
       }
     }
 
-    // 10. Poster URL validation (optional)
-    if (row.poster_url && !isValidHttpUrl(row.poster_url)) {
-      rowErrors.push('poster_url must be a valid http:// or https:// URL');
+    // 10. Poster URL validation (optional): external http(s) URL or a local /posters/ asset
+    if (row.poster_url && !isValidHttpUrl(row.poster_url) && !row.poster_url.startsWith('/posters/')) {
+      rowErrors.push('poster_url must be a valid http:// or https:// URL or a local /posters/ path');
     }
 
     // 11a. Cast validation (optional, pipe-separated "Actor Name:Character Name" or "Actor Name")
@@ -473,13 +473,16 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
           }
         }
 
-        // Insert release, ensuring the platform exists first, skipping any (series_id, url) release that already exists
-        if (row.platform_slug && row.release_url) {
+        // Insert release, ensuring the platform exists first, skipping any (series_id, url) release that already exists.
+        // A row with no release_url but a direct_watch_url (e.g. a platform homepage) still gets a release
+        // row for that direct URL, so the supplied direct_watch_url is never silently dropped.
+        const effectiveReleaseUrl = row.release_url || row.direct_watch_url;
+        if (row.platform_slug && effectiveReleaseUrl) {
           await supabase.from('platforms').upsert(
             {
               slug: row.platform_slug,
               name: platformNameForSlug(row.platform_slug),
-              url: platformUrlForSlug(row.platform_slug, row.release_url),
+              url: platformUrlForSlug(row.platform_slug, effectiveReleaseUrl),
             },
             { onConflict: 'slug' }
           );
@@ -487,13 +490,13 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
             .from('releases')
             .select('id')
             .eq('series_id', seriesId)
-            .eq('url', row.release_url)
+            .eq('url', effectiveReleaseUrl)
             .maybeSingle();
           if (!existingRelease) {
             await supabase.from('releases').insert({
               series_id: seriesId,
               platform_slug: row.platform_slug,
-              url: row.release_url,
+              url: effectiveReleaseUrl,
               is_official: true,
               region: 'Global',
               ...releaseOptionalFields,
