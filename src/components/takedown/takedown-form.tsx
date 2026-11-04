@@ -7,7 +7,7 @@ import { TextField } from '@/src/components/ui/text-field';
 import { Textarea } from '@/src/components/ui/textarea';
 import { Select } from '@/src/components/ui/select';
 import { useToast } from '@/src/components/ui/toast';
-import { CheckCircle2, Mail, Send } from 'lucide-react';
+import { Mail, Send } from 'lucide-react';
 
 export function TakedownForm() {
   const { showToast } = useToast();
@@ -18,10 +18,9 @@ export function TakedownForm() {
   const [claimantRole, setClaimantRole] = useState('owner');
   const [requestType, setRequestType] = useState('external_link');
   const [details, setDetails] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [emailOpened, setEmailOpened] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!entryUrl || !claimantEmail || !claimantName) {
       showToast({
@@ -32,46 +31,52 @@ export function TakedownForm() {
       return;
     }
 
-    setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 600));
-
-    const noticeId = `td_${Date.now()}`;
-    setSubmittedId(noticeId);
-    setIsSubmitting(false);
+    // Honest handoff: nothing is stored or logged by this form. It opens
+    // the visitor's own email client with the notice pre-filled, addressed
+    // to the site's legal contact. The notice is only sent if the visitor
+    // sends that email themselves.
+    const contactEmail = `legal@${siteConfig.domain}`;
+    const subject = `Takedown notice: ${entryUrl}`;
+    const body = [
+      `Entry URL: ${entryUrl}`,
+      `Name / entity: ${claimantName}`,
+      `Contact email: ${claimantEmail}`,
+      `Relationship: ${claimantRole}`,
+      `Request: ${requestType}`,
+      '',
+      'Statement and proof of rights:',
+      details,
+    ].join('\n');
+    const mailto = `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
+    setEmailOpened(true);
 
     showToast({
-      title: 'Takedown notice logged',
-      description: `Your request #${noticeId} has been queued for legal review.`,
+      title: 'Email draft opened',
+      description: `Your email client should have opened with the notice addressed to ${contactEmail}. Send it from there to complete the notice — nothing has been submitted yet.`,
       type: 'success',
     });
   };
 
-  if (submittedId) {
+  if (emailOpened) {
     return (
-      <div className="p-6 bg-[var(--surface)] border border-[var(--status-verified)]/30 rounded-[12px] space-y-4">
-        <div className="flex items-start gap-3">
-          <CheckCircle2 className="w-6 h-6 text-[var(--status-verified)] shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <h2 className="text-[16px] font-semibold text-[var(--ink)]">
-              Takedown request received
-            </h2>
-            <p className="text-[13px] text-[var(--muted)] leading-relaxed">
-              Your request has been logged under ID <strong className="font-mono text-[var(--ink)]">#{submittedId}</strong>. A confirmation email has been dispatched to <strong>{claimantEmail}</strong>. Our legal review team will complete verification within 48 hours.
-            </p>
-          </div>
+      <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[12px] space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-[16px] font-semibold text-[var(--ink)]">
+            Email draft opened
+          </h2>
+          <p className="text-[13px] text-[var(--muted)] leading-relaxed">
+            Your email client should have opened with the notice pre-filled and addressed to <strong>legal@{siteConfig.domain}</strong>. Nothing has been submitted or stored by this site — please send the email from your email client to complete the notice. If no email client opened, copy the details from the form and email them directly to legal@{siteConfig.domain}.
+          </p>
         </div>
 
         <Button
           type="button"
           variant="secondary"
           size="sm"
-          onClick={() => {
-            setSubmittedId(null);
-            setEntryUrl('');
-            setDetails('');
-          }}
+          onClick={() => setEmailOpened(false)}
         >
-          Submit another notice
+          Back to the form
         </Button>
       </div>
     );
@@ -154,11 +159,10 @@ export function TakedownForm() {
           type="submit"
           variant="primary"
           size="md"
-          isLoading={isSubmitting}
           leftIcon={<Send className="w-4 h-4" />}
           className="px-6 font-semibold"
         >
-          Submit notice
+          Open email to legal@{siteConfig.domain}
         </Button>
       </div>
     </form>

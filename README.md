@@ -26,11 +26,3 @@ npx tsx scripts/import-csv.ts --dry-run --file scripts/sample.csv
 SUPABASE_SERVICE_ROLE_KEY=your_key npx tsx scripts/import-csv.ts --file scripts/sample.csv
 ```
 
-### 2. Public Data Export (`scripts/export-public-data.ts`)
-Extracts public reference data (series, aliases, releases, tags, people) into clean JSON files under `/exports`.
-
-```bash
-npx tsx scripts/export-public-data.ts
-```
-
-Automated weekly via GitHub Actions (`.github/workflows/export.yml`) with a 30-day artifact retention policy.
