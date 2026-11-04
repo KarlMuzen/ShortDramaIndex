@@ -23,6 +23,7 @@ const COUNTRY_NAMES: Record<string, string> = {
   IT: 'Italy',
   BR: 'Brazil',
   MX: 'Mexico',
+  IN: 'India',
 };
 
 export function getCountryName(code?: string | null): string {

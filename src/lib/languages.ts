@@ -14,6 +14,7 @@ export function getLanguageName(code: string): string {
     fr: 'French',
     de: 'German',
     id: 'Indonesian',
+    hi: 'Hindi',
   };
   return map[code?.toLowerCase()] || code?.toUpperCase() || 'Unknown';
 }

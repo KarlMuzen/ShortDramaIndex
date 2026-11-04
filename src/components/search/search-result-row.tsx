@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { SearchResultItem } from '@/src/data/types';
 import { titlePath } from '@/src/lib/urls';
+import { getLanguageName } from '@/src/lib/languages';
 import { Poster } from '@/src/components/ui/poster';
 import { Star } from 'lucide-react';
 
@@ -72,11 +73,9 @@ export function SearchResultRow({ item }: SearchResultRowProps) {
         <div className="flex items-center gap-2 text-[12px] text-[var(--muted)] tabular-nums">
           <span>{series.year}</span>
           <span>{series.episodeCount} eps</span>
-          {series.originalLanguage === 'en' ? (
-            <span className="font-medium text-[var(--status-verified)]">Original English</span>
-          ) : (
-            <span>English Subtitled / Adapted</span>
-          )}
+          <span className="font-medium text-[var(--status-verified)]">
+            Original {getLanguageName(series.originalLanguage)}
+          </span>
           {series.ratingScore > 0 && (
             <span className="inline-flex items-center gap-1 text-[var(--ink)] font-semibold">
               <Star className="w-3 h-3 fill-[var(--crimson)] text-[var(--crimson)] shrink-0" />

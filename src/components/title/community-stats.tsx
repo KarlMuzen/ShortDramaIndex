@@ -50,9 +50,10 @@ export function CommunityStats({
             <RatingDisplay score={score} size="lg" showCount={false} />
           </div>
 
-          {/* 10 Score Rows (No star icon, bars in Muted) */}
-          <div className="space-y-1.5 pt-1">
-            {distribution.map((d) => (
+          {/* 10 Score Rows (No star icon, bars in Muted) — only with real ratings */}
+          {ratingCount > 0 ? (
+            <div className="space-y-1.5 pt-1">
+              {distribution.map((d) => (
               <div
                 key={d.score}
                 className="flex items-center gap-2 text-[12px] text-[var(--muted)]"
@@ -70,8 +71,13 @@ export function CommunityStats({
                   {d.percent}%
                 </span>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[13px] text-[var(--muted)] pt-1">
+              No user ratings yet — be the first to rate this drama
+            </p>
+          )}
         </div>
 
         {/* Right: Watchlist tracking stats */}

@@ -119,6 +119,7 @@ export function SearchFilters({
             { value: 'ko', label: 'Korean (한국어)' },
             { value: 'es', label: 'Spanish (Español)' },
             { value: 'ja', label: 'Japanese (日本語)' },
+            { value: 'hi', label: 'Hindi (हिन्दी)' },
           ]}
         />
       </div>
