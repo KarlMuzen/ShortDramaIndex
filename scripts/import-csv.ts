@@ -39,6 +39,7 @@ const KNOWN_PLATFORMS: Record<string, { name: string; url: string }> = {
   youtube: { name: 'YouTube', url: 'https://www.youtube.com' },
   'kuku-tv': { name: 'Kuku TV', url: 'https://kukufm.com' },
   'zo-tv': { name: 'ZO TV', url: 'https://www.winzogames.com' },
+  'pocket-saga': { name: 'Pocket Saga', url: 'https://pocketsaga.com' },
 };
 
 function platformNameForSlug(slug: string): string {
