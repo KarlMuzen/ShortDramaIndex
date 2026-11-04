@@ -16,6 +16,7 @@ interface CsvRow {
   release_url?: string;
   poster_url?: string;
   tags?: string;
+  cast?: string;
 }
 
 const KNOWN_PLATFORMS: Record<string, { name: string; url: string }> = {
@@ -135,6 +136,7 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
     'release_url',
     'poster_url',
     'tags',
+    'cast',
   ];
 
   console.log(`Starting CSV import ${isDryRun ? '(DRY RUN)' : ''}...`);
@@ -223,6 +225,26 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
       rowErrors.push('poster_url must be a valid http:// or https:// URL');
     }
 
+    // 11a. Cast validation (optional, pipe-separated "Actor Name:Character Name" or "Actor Name")
+    const castEntries: { actorName: string; characterName?: string }[] = [];
+    if (row.cast && row.cast.trim()) {
+      for (const part of row.cast.split('|')) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+        const [actorName, ...rest] = trimmed.split(':');
+        const characterName = rest.join(':').trim() || undefined;
+        if (!actorName || !actorName.trim()) {
+          rowErrors.push(`invalid cast format in "${part}", expected "Actor Name" or "Actor Name:Character Name"`);
+        } else if (actorName.trim().length > 200) {
+          rowErrors.push(`cast actor "${actorName.trim()}" exceeds 200 characters`);
+        } else if (characterName && characterName.length > 200) {
+          rowErrors.push(`cast character "${characterName}" exceeds 200 characters`);
+        } else {
+          castEntries.push({ actorName: actorName.trim(), characterName });
+        }
+      }
+    }
+
     // 11. Tags validation (optional, pipe-separated tag names)
     const tagEntries: { slug: string; name: string }[] = [];
     if (row.tags && row.tags.trim()) {
@@ -251,35 +273,77 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
     } else if (supabase) {
       try {
         const slug = `${slugify(row.title)}-${yearNum}`;
-        const { data: seriesData, error: seriesError } = await supabase
+        // Idempotent series: reuse an existing row with the same slug, updating it, instead of inserting a duplicate.
+        const { data: existingSeries } = await supabase
           .from('series')
-          .insert({
-            slug,
-            title: row.title,
-            romanized_title: row.original_title || null,
-            original_language: row.original_language,
-            origin_country: row.origin_country || null,
-            year: yearNum,
-            episode_count: episodesNum,
-            synopsis: row.synopsis || '',
-            poster_url: row.poster_url || null,
-            production_status: 'completed',
-            visibility: isPublic ? 'public' : 'hidden', // Imported as hidden for moderator review unless --public is passed
-          })
           .select('id')
-          .single();
+          .eq('slug', slug)
+          .maybeSingle();
 
-        if (seriesError || !seriesData) {
-          errorCount++;
-          console.error(`Row ${rowNumber} [DB ERROR]: ${seriesError?.message || 'Failed to insert series'}`);
-          continue;
+        let seriesId: number;
+        let seriesAction: 'Inserted' | 'Updated';
+        if (existingSeries) {
+          const { error: updateError } = await supabase
+            .from('series')
+            .update({
+              title: row.title,
+              romanized_title: row.original_title || null,
+              original_language: row.original_language,
+              origin_country: row.origin_country || null,
+              year: yearNum,
+              episode_count: episodesNum,
+              synopsis: row.synopsis || '',
+              poster_url: row.poster_url || null,
+              production_status: 'completed',
+              visibility: isPublic ? 'public' : 'hidden',
+            })
+            .eq('id', existingSeries.id);
+          if (updateError) {
+            errorCount++;
+            console.error(`Row ${rowNumber} [DB ERROR]: ${updateError.message || 'Failed to update series'}`);
+            continue;
+          }
+          seriesId = existingSeries.id;
+          seriesAction = 'Updated';
+        } else {
+          const { data: seriesData, error: seriesError } = await supabase
+            .from('series')
+            .insert({
+              slug,
+              title: row.title,
+              romanized_title: row.original_title || null,
+              original_language: row.original_language,
+              origin_country: row.origin_country || null,
+              year: yearNum,
+              episode_count: episodesNum,
+              synopsis: row.synopsis || '',
+              poster_url: row.poster_url || null,
+              production_status: 'completed',
+              visibility: isPublic ? 'public' : 'hidden', // Imported as hidden for moderator review unless --public is passed
+            })
+            .select('id')
+            .single();
+
+          if (seriesError || !seriesData) {
+            errorCount++;
+            console.error(`Row ${rowNumber} [DB ERROR]: ${seriesError?.message || 'Failed to insert series'}`);
+            continue;
+          }
+          seriesId = seriesData.id;
+          seriesAction = 'Inserted';
         }
 
-        const seriesId = seriesData.id;
-
-        // Insert aliases
+        // Insert aliases, skipping any (series_id, language, text) alias that already exists
         if (aliasEntries.length > 0) {
           for (const a of aliasEntries) {
+            const { data: existingAlias } = await supabase
+              .from('aliases')
+              .select('id')
+              .eq('series_id', seriesId)
+              .eq('language', a.language)
+              .eq('text', a.text)
+              .maybeSingle();
+            if (existingAlias) continue;
             await supabase.from('aliases').insert({
               series_id: seriesId,
               text: a.text,
@@ -302,7 +366,43 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
           }
         }
 
-        // Insert release, ensuring the platform exists first
+        // Insert cast: find-or-create each person by slug, then upsert the series_people link
+        if (castEntries.length > 0) {
+          for (const c of castEntries) {
+            const personSlug = slugify(c.actorName);
+            const { data: existingPerson } = await supabase
+              .from('people')
+              .select('id')
+              .eq('slug', personSlug)
+              .maybeSingle();
+            let personId: number;
+            if (existingPerson) {
+              personId = existingPerson.id;
+            } else {
+              const { data: personData, error: personError } = await supabase
+                .from('people')
+                .insert({ slug: personSlug, name: c.actorName })
+                .select('id')
+                .single();
+              if (personError || !personData) {
+                console.error(`Row ${rowNumber} [DB ERROR]: failed to insert person "${c.actorName}": ${personError?.message || 'unknown error'}`);
+                continue;
+              }
+              personId = personData.id;
+            }
+            await supabase.from('series_people').upsert(
+              {
+                series_id: seriesId,
+                person_id: personId,
+                role_type: 'actor',
+                character_name: c.characterName || null,
+              },
+              { onConflict: 'series_id,person_id,role_type' }
+            );
+          }
+        }
+
+        // Insert release, ensuring the platform exists first, skipping any (series_id, url) release that already exists
         if (row.platform_slug && row.release_url) {
           await supabase.from('platforms').upsert(
             {
@@ -312,16 +412,24 @@ export async function importCsv(filePath: string, isDryRun: boolean = false, isP
             },
             { onConflict: 'slug' }
           );
-          await supabase.from('releases').insert({
-            series_id: seriesId,
-            platform_slug: row.platform_slug,
-            url: row.release_url,
-            is_official: true,
-            region: 'Global',
-          });
+          const { data: existingRelease } = await supabase
+            .from('releases')
+            .select('id')
+            .eq('series_id', seriesId)
+            .eq('url', row.release_url)
+            .maybeSingle();
+          if (!existingRelease) {
+            await supabase.from('releases').insert({
+              series_id: seriesId,
+              platform_slug: row.platform_slug,
+              url: row.release_url,
+              is_official: true,
+              region: 'Global',
+            });
+          }
         }
 
-        console.log(`Row ${rowNumber} [SUCCESS]: Inserted ID #${seriesId} ("${row.title}") as ${isPublic ? 'public' : 'hidden'}`);
+        console.log(`Row ${rowNumber} [SUCCESS]: ${seriesAction} ID #${seriesId} ("${row.title}") as ${isPublic ? 'public' : 'hidden'}`);
       } catch (err: any) {
         errorCount++;
         console.error(`Row ${rowNumber} [EXCEPTION]: ${err.message}`);
