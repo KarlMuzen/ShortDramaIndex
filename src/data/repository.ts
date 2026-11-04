@@ -297,7 +297,7 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
       const { data: platformsData, error: platError } = await supabasePublic
         .from('platforms')
         .select('slug, name, url, is_official')
-        .limit(10);
+        .limit(50);
 
       // Slugs that actually have releases, for hiding empty platforms
       // from the homepage "Browse by platform" section. Fail-open: on a

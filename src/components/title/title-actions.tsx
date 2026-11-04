@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/src/components/ui/button';
 import { Dialog } from '@/src/components/ui/dialog';
 import { RatingInput } from '@/src/components/ui/rating-input';
@@ -135,6 +136,20 @@ export function TitleActions({ series }: TitleActionsProps) {
         description={`Choose your tracking status for "${series.title}".`}
         maxWidth="sm"
       >
+        {!user ? (
+          <div className="py-6 text-center space-y-4">
+            <p className="text-[14px] text-[var(--ink)]">
+              Sign in to track short dramas on your list.
+            </p>
+            <div>
+              <Link href="/sign-in">
+                <Button variant="primary" size="md">
+                  Sign in
+                </Button>
+              </Link>
+            </div>
+          </div>
+        ) : (
         <div className="space-y-1.5 py-1">
           {(
             [
@@ -163,6 +178,7 @@ export function TitleActions({ series }: TitleActionsProps) {
             );
           })}
         </div>
+        )}
       </Dialog>
 
       {/* Rate Dialog */}
@@ -173,13 +189,28 @@ export function TitleActions({ series }: TitleActionsProps) {
         description="Select your score from 1 (poor) to 10 (masterpiece)."
         maxWidth="sm"
       >
-        <div className="py-2 space-y-4">
-          <RatingInput
-            value={userRating}
-            onChange={(score) => handleSaveRating(score)}
-            label="Rating score"
-          />
-        </div>
+        {!user ? (
+          <div className="py-6 text-center space-y-4">
+            <p className="text-[14px] text-[var(--ink)]">
+              Sign in to rate this short drama.
+            </p>
+            <div>
+              <Link href="/sign-in">
+                <Button variant="primary" size="md">
+                  Sign in
+                </Button>
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="py-2 space-y-4">
+            <RatingInput
+              value={userRating}
+              onChange={(score) => handleSaveRating(score)}
+              label="Rating score"
+            />
+          </div>
+        )}
       </Dialog>
 
       {/* Unified Report Flow Sheet */}
