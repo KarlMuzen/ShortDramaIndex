@@ -1,4 +1,4 @@
-name: Import batch-1.csv to Supabase
+name: Import batches to Supabase
 
 on:
   workflow_dispatch:
@@ -20,6 +20,11 @@ jobs:
         run: npm ci
       - name: Import batch-1.csv to Supabase
         run: npx tsx scripts/import-csv.ts --public --file scripts/batch-1.csv
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      - name: Import batch-2.csv to Supabase
+        run: npx tsx scripts/import-csv.ts --public --file scripts/batch-2.csv
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
