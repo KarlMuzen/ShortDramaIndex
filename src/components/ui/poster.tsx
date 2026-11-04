@@ -21,14 +21,30 @@ const GRADIENTS: [string, string][] = [
   ['#3b0764', '#7f1d1d'],
   ['#172554', '#422006'],
   ['#4a044e', '#1c1917'],
+  ['#0f766e', '#431407'],
+  ['#1d4ed8', '#3f0d12'],
+  ['#365314', '#500724'],
+  ['#0e7490', '#3b0764'],
+  ['#7f1d1d', '#12283b'],
+  ['#44403c', '#1e1b4b'],
 ];
 
+// FNV-1a over the full title, finished with a murmur-style mix so that
+// titles differing by a single character (and adjacent cards) land on
+// different gradients instead of clustering on the same purple-brown pair.
 function gradientForTitle(title?: string): string {
   const text = title || 'Short drama';
-  let hash = 0;
+  let hash = 0x811c9dc5;
   for (let i = 0; i < text.length; i++) {
-    hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
   }
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x7feb352d) >>> 0;
+  // Keep the hash unsigned: a signed value here makes `hash % length`
+  // negative for some titles, and destructuring GRADIENTS[negative]
+  // throws "undefined is not iterable" during prerender.
+  hash = (hash ^ (hash >>> 15)) >>> 0;
   const [from, to] = GRADIENTS[hash % GRADIENTS.length];
   return `linear-gradient(165deg, ${from} 0%, ${to} 100%)`;
 }
@@ -51,14 +67,33 @@ function CoverCard({
       aria-label={title ? `${title} short drama cover` : 'Short drama cover'}
       {...props}
     >
-      <div className="absolute inset-0 flex items-center justify-center p-4 pb-10">
-        <span className="text-center text-[15px] font-semibold leading-snug text-white break-words">
+      {/* Subtle grid + vignette over the gradient: a film-grain feel that
+          keeps the fallback from reading as a flat colour block. */}
+      <div
+        className="absolute inset-0 opacity-40"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)',
+          backgroundSize: '12px 12px',
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.35) 100%)',
+        }}
+      />
+      {/* Small uppercase editorial type: it labels the card without
+          competing with the series title shown underneath it. */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
+        <span className="text-[9px] font-medium uppercase tracking-[0.22em] text-white/50">
+          Short drama
+        </span>
+        <span className="text-[12px] font-semibold uppercase leading-relaxed tracking-[0.14em] text-white/90 break-words">
           {title || 'Short drama'}
         </span>
       </div>
-      <span className="absolute bottom-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-medium tracking-wide text-white/90">
-        Vertical drama
-      </span>
     </div>
   );
 }
