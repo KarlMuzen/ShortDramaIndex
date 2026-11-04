@@ -222,3 +222,5 @@ begin
 end;
 $$;
 
+
+grant execute on function public.search_series(text, jsonb, text, integer, integer) to anon, authenticated, service_role;
