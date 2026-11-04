@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   CheckCircle2,
   XCircle,
-  HelpCircle,
   Clock,
   User,
   AlertTriangle,
@@ -117,14 +116,6 @@ function ModQueueContent({
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const handleAskInfo = () => {
-    showToast({
-      title: 'Clarification requested',
-      description: `Sent clarification request message to @${selectedReport?.submittedBy}.`,
-      type: 'info',
-    });
   };
 
   // Keyboard navigation shortcuts
@@ -418,16 +409,6 @@ function ModQueueContent({
 
               {/* Action Buttons */}
               <div className="pt-2 border-t border-[var(--line)] flex items-center justify-between gap-3">
-                <Button
-                  type="button"
-                  variant="quiet"
-                  size="sm"
-                  onClick={handleAskInfo}
-                  leftIcon={<HelpCircle className="w-4 h-4 text-[var(--muted)]" />}
-                >
-                  Ask for info
-                </Button>
-
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"

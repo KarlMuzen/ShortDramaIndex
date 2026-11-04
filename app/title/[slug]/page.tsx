@@ -100,8 +100,13 @@ export default async function TitlePage({ params }: TitlePageProps) {
     notFound();
   }
 
-  // 1. Permanent redirect check if merged
-  const redirectedToId = await checkRedirect(seriesId);
+  // 1. Permanent redirect check if merged, concurrently with the series
+  // fetch (generateMetadata already fetched this series once this request;
+  // the cached getSeriesById shares that fetch instead of re-querying).
+  const [redirectedToId, series] = await Promise.all([
+    checkRedirect(seriesId),
+    getSeriesById(seriesId),
+  ]);
   if (redirectedToId) {
     const target = await getSeriesById(redirectedToId);
     if (target) {
@@ -109,10 +114,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
     }
   }
 
-  // 2. Fetch primary series data
-  const series = await getSeriesById(seriesId);
-
-  // 3. Return 404 if record is not found or marked 'removed'
+  // 2. Return 404 if record is not found or marked 'removed'
   if (!series || series.visibility === 'removed') {
     notFound();
   }
@@ -124,7 +126,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
   }
 
   // 4. Fetch related series for recommendations
-  const relatedSeries = await getRelatedSeries(series.id, 6);
+  const relatedSeries = await getRelatedSeries(series.id, 6, series.tags);
 
   const firstTag = series.tags[0];
   const originCountryName = series.originCountry ? getCountryName(series.originCountry) : null;

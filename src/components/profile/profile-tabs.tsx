@@ -216,12 +216,18 @@ export function ProfileTabs({ profileData, isOwner: isOwnerProp }: ProfileTabsPr
 
                   <div className="text-[13px]">
                     <span className="text-[var(--muted)] mr-1">Target:</span>
-                    <Link
-                      href={titlePath({ slug: rep.data?.targetAlias ? 'title' : 'title', shortId: String(rep.seriesId) })}
-                      className="font-medium text-[var(--ink)] hover:text-[var(--crimson)] hover:underline"
-                    >
-                      {rep.seriesTitle}
-                    </Link>
+                    {rep.seriesSlug && rep.seriesShortId ? (
+                      <Link
+                        href={titlePath({ slug: rep.seriesSlug, shortId: rep.seriesShortId })}
+                        className="font-medium text-[var(--ink)] hover:text-[var(--crimson)] hover:underline"
+                      >
+                        {rep.seriesTitle}
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-[var(--ink)]">
+                        {rep.data?.title || rep.seriesTitle}
+                      </span>
+                    )}
                   </div>
 
                   {/* Declined Moderator Reason */}

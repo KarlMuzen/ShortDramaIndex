@@ -152,6 +152,8 @@ export interface UserReport {
   id: string;
   seriesId: number;
   seriesTitle: string;
+  seriesSlug?: string;
+  seriesShortId?: string;
   type: ReportType;
   typeName: string;
   status: ReportStatus;
@@ -159,6 +161,7 @@ export interface UserReport {
   submittedAt: string;
   moderatorNote?: string;
   data: {
+    title?: string;
     name?: string;
     language?: string;
     url?: string;
