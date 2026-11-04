@@ -1,4 +1,4 @@
-# ShortDramaIndex (shortdramaindex.com)
+# ShortDramaIndex (shortdramaindex.vercel.app)
 
 The calm reference library and catalog database for short vertical dramas (mini dramas, micro dramas, duanju).
 
@@ -10,7 +10,7 @@ The following environment variables and GitHub Repository Secrets are required:
 
 | Variable / Secret | Scope | Description |
 | :--- | :--- | :--- |
-| `NEXT_PUBLIC_SITE_URL` | Public / Runtime | Base canonical URL of the deployment (e.g. `https://shortdramaindex.com`). |
+| `NEXT_PUBLIC_SITE_URL` | Public / Runtime | Base canonical URL of the deployment (e.g. `https://shortdramaindex.vercel.app`). |
 | `NEXT_PUBLIC_SUPABASE_URL` | Public / Runtime | Public Supabase project API URL. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public / Runtime | Public Supabase anonymous client API key. |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Server / Scripts Only** | Elevated service-role key used strictly in CI workflows and maintenance scripts (`/scripts`). Never committed or exposed to browser client code. |

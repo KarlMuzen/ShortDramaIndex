@@ -12,7 +12,9 @@ interface SearchResultRowProps {
 export function SearchResultRow({ item }: SearchResultRowProps) {
   const { series, matchedAlias } = item;
   const path = titlePath(series);
-  const placesToWatchCount = series.releases.length;
+  // Search listings carry releaseCount from the RPC (migration 00009);
+  // fall back to loaded releases for detail/homepage series objects.
+  const placesToWatchCount = series.releaseCount ?? series.releases.length;
 
   return (
     <div className="flex gap-4 items-start py-4 border-b border-[var(--line)] text-left group">

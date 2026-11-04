@@ -9,7 +9,7 @@ import { EmptyState } from '@/src/components/ui/empty-state';
 import { HeroSearch } from '@/src/components/home/hero-search';
 import { Star } from 'lucide-react';
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -146,7 +146,7 @@ export default async function HomePage() {
                 </div>
 
                 <div className="flex flex-col flex-1">
-                  <h3 className="text-[14px] font-semibold text-[var(--ink)] leading-snug line-clamp-2 group-hover:text-[var(--crimson)] transition-colors">
+                  <h3 className="text-[14px] font-semibold text-[var(--ink)] leading-snug line-clamp-2 break-words group-hover:text-[var(--crimson)] transition-colors">
                     {series.title}
                   </h3>
                   <div className="flex items-center gap-2 text-[12px] text-[var(--muted)] tabular-nums mt-1">

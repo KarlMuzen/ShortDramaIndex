@@ -35,7 +35,7 @@ export function TakedownForm() {
     // the visitor's own email client with the notice pre-filled, addressed
     // to the site's legal contact. The notice is only sent if the visitor
     // sends that email themselves.
-    const contactEmail = `legal@${siteConfig.domain}`;
+    const contactEmail = siteConfig.contact.legal;
     const subject = `Takedown notice: ${entryUrl}`;
     const body = [
       `Entry URL: ${entryUrl}`,
@@ -66,7 +66,7 @@ export function TakedownForm() {
             Email draft opened
           </h2>
           <p className="text-[13px] text-[var(--muted)] leading-relaxed">
-            Your email client should have opened with the notice pre-filled and addressed to <strong>legal@{siteConfig.domain}</strong>. Nothing has been submitted or stored by this site — please send the email from your email client to complete the notice. If no email client opened, copy the details from the form and email them directly to legal@{siteConfig.domain}.
+            Your email client should have opened with the notice pre-filled and addressed to <strong>{siteConfig.contact.legal}</strong>. Nothing has been submitted or stored by this site — please send the email from your email client to complete the notice. If no email client opened, copy the details from the form and email them directly to {siteConfig.contact.legal}.
           </p>
         </div>
 
@@ -91,7 +91,7 @@ export function TakedownForm() {
       <TextField
         label="URL of the drama entry"
         type="url"
-        placeholder="https://shortdramaindex.com/title/..."
+        placeholder="https://shortdramaindex.vercel.app/title/..."
         value={entryUrl}
         onChange={(e) => setEntryUrl(e.target.value)}
         required
@@ -152,7 +152,7 @@ export function TakedownForm() {
       <div className="pt-2 border-t border-[var(--line)] flex items-center justify-between">
         <div className="text-[12px] text-[var(--muted)] flex items-center gap-1.5">
           <Mail className="w-3.5 h-3.5" />
-          <span>Or email legal@{siteConfig.domain}</span>
+          <span>Or email {siteConfig.contact.legal}</span>
         </div>
 
         <Button
@@ -162,7 +162,7 @@ export function TakedownForm() {
           leftIcon={<Send className="w-4 h-4" />}
           className="px-6 font-semibold"
         >
-          Open email to legal@{siteConfig.domain}
+          Open email to {siteConfig.contact.legal}
         </Button>
       </div>
     </form>

@@ -295,6 +295,14 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         .select('slug, name, url, is_official')
         .limit(10);
 
+      // Slugs that actually have releases, for hiding empty platforms
+      // from the homepage "Browse by platform" section. Fail-open: on a
+      // query error, keep the full platform list.
+      const { data: releaseSlugsData, error: homeRelError } =
+        await supabasePublic.from('releases').select('platform_slug').limit(1000);
+      if (homeRelError)
+        logDataError('getHomePageFeed: releases query', homeRelError);
+
       if (popError) logDataError('getHomePageFeed: popular series query', popError);
       if (aliasError) logDataError('getHomePageFeed: aliases query', aliasError);
       if (tagsError) logDataError('getHomePageFeed: tags query', tagsError);
@@ -367,11 +375,17 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         { code: 'ja', label: 'Japanese', nativeLabel: '日本語' },
       ];
 
+      const platformsWithReleases = homeRelError
+        ? null
+        : new Set((releaseSlugsData || []).map((r: any) => r.platform_slug));
+
       return {
         popularThisWeek,
         recentlyAddedAliases,
         browseTags: (tagsData || []) as Tag[],
-        browsePlatforms: (platformsData || []) as Platform[],
+        browsePlatforms: ((platformsData || []) as Platform[]).filter(
+          (p) => !platformsWithReleases || platformsWithReleases.has(p.slug)
+        ),
         browseLanguages,
       };
     } catch (error) {
@@ -636,6 +650,8 @@ export async function searchSeries(params: {
               ]
             : [],
           releases: [],
+          releaseCount:
+            row.release_count != null ? Number(row.release_count) : undefined,
           cast: [],
         };
 
@@ -1271,13 +1287,31 @@ export async function getAllPlatforms(): Promise<Platform[]> {
       if (error) logDataError('repository', error);
       if (error || !data) return [];
 
-      return data.map((p: any) => ({
-        slug: p.slug,
-        name: p.name,
-        url: p.url,
-        official: p.is_official,
-        icon: p.icon,
-      }));
+      // Hide platforms with no releases from public filters/navigation
+      // (and from the sitemap, which also uses this list). On a releases
+      // query failure, fall back to the full list rather than hiding all.
+      const { data: releaseRows, error: relError } = await supabasePublic
+        .from('releases')
+        .select('platform_slug')
+        .limit(1000);
+      if (relError) {
+        logDataError('repository', relError);
+      }
+      const platformsWithReleases = relError
+        ? null
+        : new Set((releaseRows || []).map((r: any) => r.platform_slug));
+
+      return data
+        .filter(
+          (p: any) => !platformsWithReleases || platformsWithReleases.has(p.slug)
+        )
+        .map((p: any) => ({
+          slug: p.slug,
+          name: p.name,
+          url: p.url,
+          official: p.is_official,
+          icon: p.icon,
+        }));
     } catch (error) {
       logDataError('repository', error);
       return [];

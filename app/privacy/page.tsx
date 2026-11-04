@@ -143,7 +143,7 @@ export default function PrivacyPage() {
             5. Contact
           </h2>
           <p className="text-[var(--muted)]">
-            For any questions, requests, or concerns regarding your privacy or personal data on {siteConfig.name}, please contact us at privacy@{siteConfig.domain}.
+            For any questions, requests, or concerns regarding your privacy or personal data on {siteConfig.name}, please contact us at {siteConfig.contact.privacy}.
           </p>
         </section>
       </article>

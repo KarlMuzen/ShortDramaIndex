@@ -151,7 +151,7 @@ export default function TermsPage() {
             We may update these terms from time to time to reflect modifications in our reference database features or applicable legal requirements. The updated terms will be posted directly to this page with an updated effective date. Continued use of the site following any modifications constitutes acceptance of the revised terms.
           </p>
           <p className="text-[13px] text-[var(--muted)] pt-2 border-t border-[var(--line)]">
-            Questions regarding these terms may be directed to legal@{siteConfig.domain}.
+            Questions regarding these terms may be directed to {siteConfig.contact.legal}.
           </p>
         </section>
       </article>
