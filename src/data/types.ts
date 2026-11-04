@@ -120,6 +120,9 @@ export interface Series {
   tags: Tag[];
   aliases: Alias[];
   releases: Release[];
+  // Search listings do not load full releases; the RPC supplies this count
+  // instead (see migration 00009). Undefined until that migration runs.
+  releaseCount?: number;
   cast: PersonRole[];
 }
 

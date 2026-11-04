@@ -23,7 +23,7 @@ import { TitleFooterHistory } from '@/src/components/title/title-footer-history'
 import { ChevronDown, Star } from 'lucide-react';
 
 export const dynamicParams = true;
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export async function generateStaticParams() {
   try {

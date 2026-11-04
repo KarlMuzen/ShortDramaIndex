@@ -698,7 +698,7 @@ export async function resolveModerationReportAction(params: {
         series_id: report.series_id,
         text: report.data.name,
         language: report.data.language || 'zh',
-        source_url: report.data.url || 'https://shortdramaindex.com',
+        source_url: report.data.url || 'https://shortdramaindex.vercel.app',
         source_label: 'Community report',
         status: 'verified',
         added_by: report.submitted_by,
