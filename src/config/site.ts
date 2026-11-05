@@ -15,6 +15,7 @@ export const siteConfig = {
   links: {
     about: '/about',
     guidelines: '/guidelines',
+    insights: '/insights',
     terms: '/terms',
     privacy: '/privacy',
     takedown: '/takedown',

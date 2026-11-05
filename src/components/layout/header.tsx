@@ -91,6 +91,12 @@ export function Header() {
                 >
                   Browse
                 </Link>
+                <Link
+                  href="/insights"
+                  className="hover:text-[var(--ink)] transition-colors"
+                >
+                  Insights
+                </Link>
               </nav>
             </div>
 
