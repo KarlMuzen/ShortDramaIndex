@@ -18,6 +18,7 @@ import {
   UserPreferences,
   Revision,
   PersonRole,
+  SeriesProductionType,
 } from './types';
 import {
   mockSeriesList,
@@ -479,6 +480,381 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
     browsePlatforms: mockPlatforms,
     browseLanguages,
   };
+}
+
+export interface MarketMonetizationSplit {
+  total: number;
+  knownTotal: number;
+  coinPerEpisode: number;
+  adSupported: number;
+  coinPct: number;
+  adPct: number;
+}
+
+export interface PlatformEpisodeAverage {
+  slug: string;
+  name: string;
+  seriesCount: number;
+  avgEpisodes: number;
+  medianEpisodes: number;
+  minEpisodes: number;
+  maxEpisodes: number;
+}
+
+export interface TopTrope {
+  slug: string;
+  name: string;
+  seriesCount: number;
+  pctOfSeries: number;
+}
+
+export interface ProductionFormatRow {
+  type: SeriesProductionType;
+  label: string;
+  seriesCount: number;
+  pctOfSeries: number;
+  avgEpisodes: number | null;
+  avgRuntimeMinutes: number | null;
+}
+
+export interface MarketInsights {
+  totalSeries: number;
+  totalReleases: number;
+  platformsWithReleases: number;
+  tagsIndexed: number;
+  monetization: {
+    us: MarketMonetizationSplit;
+    india: MarketMonetizationSplit;
+    otherReleases: number;
+  };
+  platformEpisodeAverages: PlatformEpisodeAverage[];
+  topTropes: TopTrope[];
+  productionFormat: ProductionFormatRow[];
+  humanCastSeries: number;
+}
+
+// Platform groupings for the US vs India monetization split. Grounded in
+// the live catalog: the US set carries the English/US-origin titles and the
+// India set carries the Hindi/India-origin titles (Kuku TV and ZO TV are
+// Indian services; Pocket Saga's catalogued titles are Hindi/India-origin).
+// Platforms outside either set are counted as otherReleases, not forced
+// into a market.
+const US_MARKET_PLATFORMS = ['reelshort', 'dramabox', 'shortmax', 'goodshort'];
+const INDIA_MARKET_PLATFORMS = ['kuku-tv', 'zo-tv', 'pocket-saga'];
+const INSIGHT_PLATFORM_ORDER = [
+  'reelshort',
+  'dramabox',
+  'shortmax',
+  'kuku-tv',
+  'pocket-saga',
+  'zo-tv',
+];
+
+function emptyMarketInsights(): MarketInsights {
+  const emptySplit: MarketMonetizationSplit = {
+    total: 0,
+    knownTotal: 0,
+    coinPerEpisode: 0,
+    adSupported: 0,
+    coinPct: 0,
+    adPct: 0,
+  };
+  return {
+    totalSeries: 0,
+    totalReleases: 0,
+    platformsWithReleases: 0,
+    tagsIndexed: 0,
+    monetization: {
+      us: { ...emptySplit },
+      india: { ...emptySplit },
+      otherReleases: 0,
+    },
+    platformEpisodeAverages: [],
+    topTropes: [],
+    productionFormat: [],
+    humanCastSeries: 0,
+  };
+}
+
+function mean(values: number[]): number | null {
+  if (values.length === 0) return null;
+  return values.reduce((sum, v) => sum + v, 0) / values.length;
+}
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
+}
+
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+interface MarketInsightsInput {
+  series: {
+    episodeCount: number;
+    avgEpisodeMinutes: number | null;
+    productionType: SeriesProductionType;
+    hasHumanCast: boolean;
+  }[];
+  releases: { platformSlug: string; monetizationType: string | null }[];
+  platforms: { slug: string; name: string }[];
+  seriesTags: { seriesId: number; tagSlug: string }[];
+  tags: { slug: string; name: string }[];
+  // Episode counts per platform, joined release -> series with one entry
+  // per series per platform.
+  platformEpisodes: Record<string, number[]>;
+}
+
+function computeMarketInsights(input: MarketInsightsInput): MarketInsights {
+  const totalSeries = input.series.length;
+  const pct = (count: number): number =>
+    totalSeries === 0 ? 0 : round1((count / totalSeries) * 100);
+
+  const splitFor = (platformSlugs: string[]): MarketMonetizationSplit => {
+    const rows = input.releases.filter((r) =>
+      platformSlugs.includes(r.platformSlug)
+    );
+    const coinPerEpisode = rows.filter(
+      (r) => r.monetizationType === 'coin_per_episode'
+    ).length;
+    const adSupported = rows.filter(
+      (r) =>
+        r.monetizationType === 'ad_supported' ||
+        r.monetizationType === 'free_with_ads'
+    ).length;
+    const knownTotal = rows.filter((r) => r.monetizationType != null).length;
+    return {
+      total: rows.length,
+      knownTotal,
+      coinPerEpisode,
+      adSupported,
+      coinPct: knownTotal === 0 ? 0 : round1((coinPerEpisode / knownTotal) * 100),
+      adPct: knownTotal === 0 ? 0 : round1((adSupported / knownTotal) * 100),
+    };
+  };
+
+  const platformBySlug = new Map(input.platforms.map((p) => [p.slug, p.name]));
+
+  const platformEpisodeAverages: PlatformEpisodeAverage[] = [];
+  for (const slug of INSIGHT_PLATFORM_ORDER) {
+    const episodes = input.platformEpisodes[slug] || [];
+    if (episodes.length === 0) continue;
+    const avg = mean(episodes);
+    const med = median(episodes);
+    platformEpisodeAverages.push({
+      slug,
+      name: platformBySlug.get(slug) || slug,
+      seriesCount: episodes.length,
+      avgEpisodes: avg == null ? 0 : round1(avg),
+      medianEpisodes: med == null ? 0 : round1(med),
+      minEpisodes: Math.min(...episodes),
+      maxEpisodes: Math.max(...episodes),
+    });
+  }
+
+  const seriesByTag = new Map<string, Set<number>>();
+  for (const row of input.seriesTags) {
+    const set = seriesByTag.get(row.tagSlug) || new Set<number>();
+    set.add(row.seriesId);
+    seriesByTag.set(row.tagSlug, set);
+  }
+  const tagName = new Map(input.tags.map((t) => [t.slug, t.name]));
+  const topTropes: TopTrope[] = [...seriesByTag.entries()]
+    .map(([slug, seriesIds]) => ({
+      slug,
+      name: tagName.get(slug) || slug,
+      seriesCount: seriesIds.size,
+      pctOfSeries: pct(seriesIds.size),
+    }))
+    .sort((a, b) => b.seriesCount - a.seriesCount || a.name.localeCompare(b.name))
+    .slice(0, 6);
+
+  const formatLabels: { type: SeriesProductionType; label: string }[] = [
+    { type: 'live_action', label: 'Live-action' },
+    { type: 'ai_assisted', label: 'AI-assisted' },
+    { type: 'animation', label: 'Animation' },
+    { type: 'hybrid', label: 'Hybrid' },
+  ];
+  const productionFormat: ProductionFormatRow[] = formatLabels.map(({ type, label }) => {
+    const rows = input.series.filter((s) => s.productionType === type);
+    const avgEpisodes = mean(rows.map((s) => s.episodeCount));
+    const runtimes = rows
+      .map((s) => s.avgEpisodeMinutes)
+      .filter((v): v is number => v != null);
+    const avgRuntime = mean(runtimes);
+    return {
+      type,
+      label,
+      seriesCount: rows.length,
+      pctOfSeries: pct(rows.length),
+      avgEpisodes: avgEpisodes == null ? null : round1(avgEpisodes),
+      avgRuntimeMinutes: avgRuntime == null ? null : round1(avgRuntime),
+    };
+  });
+
+  const marketSlugs = [...US_MARKET_PLATFORMS, ...INDIA_MARKET_PLATFORMS];
+  const otherReleases = input.releases.filter(
+    (r) => !marketSlugs.includes(r.platformSlug)
+  ).length;
+
+  return {
+    totalSeries,
+    totalReleases: input.releases.length,
+    platformsWithReleases: new Set(input.releases.map((r) => r.platformSlug)).size,
+    tagsIndexed: seriesByTag.size,
+    monetization: {
+      us: splitFor(US_MARKET_PLATFORMS),
+      india: splitFor(INDIA_MARKET_PLATFORMS),
+      otherReleases,
+    },
+    platformEpisodeAverages,
+    topTropes,
+    productionFormat,
+    humanCastSeries: input.series.filter((s) => s.hasHumanCast).length,
+  };
+}
+
+/**
+ * Market benchmarks computed from the live catalog: monetization split by
+ * US vs Indian platforms, per-platform episode averages, top tropes, and
+ * production format. No values are invented: a format or model with no
+ * titles in the catalog is reported as zero, and percentages are computed
+ * over the releases that actually record a monetization type.
+ */
+export async function getMarketInsights(): Promise<MarketInsights> {
+  if (!isSupabaseConfigured && !allowMockData) {
+    return mockDataUnavailable('getMarketInsights', emptyMarketInsights());
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      const [
+        { data: seriesData, error: seriesError },
+        { data: releaseData, error: releaseError },
+        { data: platformData, error: platformError },
+        { data: seriesTagData, error: seriesTagError },
+        { data: tagData, error: tagError },
+      ] = await Promise.all([
+        supabasePublic
+          .from('series')
+          .select('id, episode_count, avg_episode_minutes, production_type, has_human_cast')
+          .eq('visibility', 'public')
+          .limit(1000),
+        supabasePublic
+          .from('releases')
+          .select('series_id, platform_slug, monetization_type')
+          .limit(1000),
+        supabasePublic.from('platforms').select('slug, name').limit(50),
+        supabasePublic
+          .from('series_tags')
+          .select('series_id, tag_slug')
+          .limit(1000),
+        supabasePublic.from('tags').select('slug, name').limit(100),
+      ]);
+
+      if (seriesError) logDataError('getMarketInsights: series query', seriesError);
+      if (releaseError) logDataError('getMarketInsights: releases query', releaseError);
+      if (platformError) logDataError('getMarketInsights: platforms query', platformError);
+      if (seriesTagError) logDataError('getMarketInsights: series_tags query', seriesTagError);
+      if (tagError) logDataError('getMarketInsights: tags query', tagError);
+      if (seriesError || releaseError || platformError || seriesTagError || tagError) {
+        return emptyMarketInsights();
+      }
+
+      const seriesById = new Map<number, { episodeCount: number }>(
+        (seriesData || []).map((s: any) => [
+          Number(s.id),
+          { episodeCount: Number(s.episode_count || 0) },
+        ])
+      );
+      // Per-platform episode lists, joined release -> series. A series
+      // listed twice on one platform counts once.
+      const platformEpisodes: Record<string, number[]> = {};
+      const seenSeriesByPlatform = new Map<string, Set<number>>();
+      for (const r of releaseData || []) {
+        const series = seriesById.get(Number((r as any).series_id));
+        if (!series) continue;
+        const slug = (r as any).platform_slug as string;
+        const seen = seenSeriesByPlatform.get(slug) || new Set<number>();
+        if (seen.has(Number((r as any).series_id))) continue;
+        seen.add(Number((r as any).series_id));
+        seenSeriesByPlatform.set(slug, seen);
+        (platformEpisodes[slug] = platformEpisodes[slug] || []).push(
+          series.episodeCount
+        );
+      }
+
+      return computeMarketInsights({
+        series: (seriesData || []).map((s: any) => ({
+          episodeCount: Number(s.episode_count || 0),
+          avgEpisodeMinutes:
+            s.avg_episode_minutes != null ? Number(s.avg_episode_minutes) : null,
+          productionType: (s.production_type || 'live_action') as SeriesProductionType,
+          hasHumanCast: s.has_human_cast ?? true,
+        })),
+        releases: (releaseData || []).map((r: any) => ({
+          platformSlug: r.platform_slug as string,
+          monetizationType: (r.monetization_type as string | null) || null,
+        })),
+        platforms: (platformData || []).map((p: any) => ({
+          slug: p.slug as string,
+          name: p.name as string,
+        })),
+        seriesTags: (seriesTagData || []).map((st: any) => ({
+          seriesId: Number(st.series_id),
+          tagSlug: st.tag_slug as string,
+        })),
+        tags: (tagData || []).map((t: any) => ({
+          slug: t.slug as string,
+          name: t.name as string,
+        })),
+        platformEpisodes,
+      });
+    } catch (error) {
+      logDataError('getMarketInsights', error);
+      return emptyMarketInsights();
+    }
+  }
+
+  // Fallback to typed mock data only when NEXT_PUBLIC_SUPABASE_URL is unset.
+  const platformEpisodes: Record<string, number[]> = {};
+  for (const s of mockSeriesList) {
+    if (s.visibility !== 'public') continue;
+    for (const r of s.releases) {
+      (platformEpisodes[r.platformSlug] = platformEpisodes[r.platformSlug] || []).push(
+        s.episodeCount
+      );
+    }
+  }
+  return computeMarketInsights({
+    series: mockSeriesList
+      .filter((s) => s.visibility === 'public')
+      .map((s) => ({
+        episodeCount: s.episodeCount,
+        avgEpisodeMinutes: s.avgEpisodeMinutes ?? null,
+        productionType: s.productionType,
+        hasHumanCast: s.hasHumanCast,
+      })),
+    releases: mockSeriesList
+      .filter((s) => s.visibility === 'public')
+      .flatMap((s) =>
+        s.releases.map((r) => ({
+          platformSlug: r.platformSlug,
+          monetizationType: (r.monetizationType as string | null) || null,
+        }))
+      ),
+    platforms: mockPlatforms.map((p) => ({ slug: p.slug, name: p.name })),
+    seriesTags: mockSeriesList
+      .filter((s) => s.visibility === 'public')
+      .flatMap((s) => s.tags.map((t) => ({ seriesId: s.id, tagSlug: t.slug }))),
+    tags: mockTags.map((t) => ({ slug: t.slug, name: t.name })),
+    platformEpisodes,
+  });
 }
 
 /**

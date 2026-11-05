@@ -35,6 +35,12 @@ export function Footer() {
             Guidelines
           </Link>
           <Link
+            href={siteConfig.links.insights}
+            className="hover:text-[var(--crimson)] transition-colors"
+          >
+            Insights
+          </Link>
+          <Link
             href={siteConfig.links.terms}
             className="hover:text-[var(--crimson)] transition-colors"
           >
