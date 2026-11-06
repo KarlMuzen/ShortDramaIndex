@@ -8,7 +8,7 @@ import { useSession } from '@/src/context/session-context';
 import { useTheme } from '@/src/context/theme-context';
 import { IconButton } from '../ui/icon-button';
 import { Menu, MenuItem, MenuDivider } from '../ui/menu';
-import { Search, Sun, Moon, Laptop, LogOut, X, Menu as MenuIcon } from 'lucide-react';
+import { Search, Sun, Moon, Laptop, LogOut, X } from 'lucide-react';
 
 export function Header() {
   const router = useRouter();
@@ -17,7 +17,6 @@ export function Header() {
   const { user, signOut, isLoading } = useSession();
   const { theme, setTheme, mounted } = useTheme();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const mobileInputRef = useRef<HTMLInputElement>(null);
 
@@ -27,17 +26,11 @@ export function Header() {
     }
   }, [mobileSearchOpen]);
 
-  // Close the mobile menu on navigation (link taps also close it directly).
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [pathname]);
-
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setMobileSearchOpen(false);
-      setMobileMenuOpen(false);
     }
   };
 
@@ -126,36 +119,12 @@ export function Header() {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1.5 shrink-0">
-              {/* Mobile Menu Trigger (<1024px): Browse/Insights live
-                  here on phone and tablet, where the desktop nav is hidden. */}
-              <div className="lg:hidden">
-                <IconButton
-                  size="sm"
-                  aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-                  aria-expanded={mobileMenuOpen}
-                  aria-controls="mobile-nav-menu"
-                  onClick={() => {
-                    setMobileMenuOpen((open) => !open);
-                    setMobileSearchOpen(false);
-                  }}
-                >
-                  {mobileMenuOpen ? (
-                    <X className="w-4 h-4" />
-                  ) : (
-                    <MenuIcon className="w-4 h-4" />
-                  )}
-                </IconButton>
-              </div>
-
               {/* Mobile Search Trigger (<768px) */}
               <div className="md:hidden">
                 <IconButton
                   size="sm"
                   aria-label="Search"
-                  onClick={() => {
-                    setMobileSearchOpen(true);
-                    setMobileMenuOpen(false);
-                  }}
+                  onClick={() => setMobileSearchOpen(true)}
                 >
                   <Search className="w-4 h-4" />
                 </IconButton>
@@ -286,42 +255,6 @@ export function Header() {
           </>
         )}
       </div>
-
-      {/* Mobile nav panel (<1024px): the Browse/Insights links from the
-          desktop nav, reachable on phone and tablet via the hamburger. */}
-      {mobileMenuOpen && (
-        <nav
-          id="mobile-nav-menu"
-          aria-label="Mobile"
-          className="lg:hidden border-t border-[var(--line)] bg-[var(--surface)]"
-        >
-          <div className="max-w-[1120px] mx-auto px-4 sm:px-6 py-1 flex flex-col divide-y divide-[var(--line)]">
-            <Link
-              href="/search"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-2.5 text-[14px] font-medium text-[var(--ink)] hover:text-[var(--crimson)] transition-colors"
-            >
-              Browse
-            </Link>
-            <Link
-              href="/insights"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-2.5 text-[14px] font-medium text-[var(--ink)] hover:text-[var(--crimson)] transition-colors"
-            >
-              Insights
-            </Link>
-            {!user && !isLoading && !isAuthPage && (
-              <Link
-                href="/sign-up"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2.5 text-[14px] font-medium text-[var(--ink)] hover:text-[var(--crimson)] transition-colors"
-              >
-                Create account
-              </Link>
-            )}
-          </div>
-        </nav>
-      )}
     </header>
   );
 }
