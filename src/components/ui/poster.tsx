@@ -147,11 +147,7 @@ export function Poster({
         referrerPolicy="no-referrer"
         unoptimized
         onError={() => setFailedSrc(src ?? null)}
-        // Contain, not cover: source posters come in several aspect
-        // ratios, and cover-cropping cut the artwork text at the edges
-        // ("Fatal Temptation" rendered as "ATAL TEMPTATION"). Contain
-        // shows the whole poster; the frame keeps its 9:16 shape.
-        className="object-contain"
+        className="object-cover"
       />
     </div>
   );
