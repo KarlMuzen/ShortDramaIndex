@@ -8,7 +8,7 @@ import { BarChart3 } from 'lucide-react';
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: 'Vertical Drama Market Intelligence & Benchmarks | ShortDramaIndex',
+  title: 'Vertical Drama Market Intelligence & Benchmarks',
   description:
     'Market benchmarks computed from the ShortDramaIndex catalog: monetization model split across US and Indian platforms, average episode counts by platform, top tropes, and production formats.',
   alternates: {
@@ -125,6 +125,13 @@ export default async function InsightsPage() {
           , refreshed every 5 minutes. No estimates: every number below is
           counted from indexed titles, releases, and tags.
         </p>
+        <p className="text-[14px] text-[var(--muted)]">
+          A 60-title curated sample, not the whole market. The 35 US titles
+          are in-app coin-paywalled series, while the 25 Indian titles index
+          official ad-supported YouTube series and full-compilation releases
+          — a single-video compilation records 1 release unit, while a
+          multi-episode playlist records more.
+        </p>
       </header>
 
       {insights.totalSeries === 0 ? (
@@ -151,6 +158,9 @@ export default async function InsightsPage() {
               <p className="text-[13px] text-[var(--muted)]">
                 Ad-supported vs coin paywall, by market. Percentages are over
                 releases in each market that record a monetization type.
+                Counts come from a 60-title curated sample — 35 US
+                coin-paywalled series and 25 Indian ad-supported YouTube
+                series.
               </p>
             </div>
 
@@ -281,8 +291,11 @@ export default async function InsightsPage() {
             </div>
 
             <p className="text-[12px] text-[var(--muted)] border-t border-[var(--line)] pt-3">
-              ZO TV titles are single-episode listings (1 episode each), so
+              These averages come from the same 60-title curated sample. ZO
+              TV titles are single-episode listings (1 episode each), so
               its 1.0 average is a listing format, not a series length.
+              Single-video compilations record 1 release unit;
+              multi-episode playlists record more.
             </p>
           </section>
 
@@ -360,7 +373,7 @@ export default async function InsightsPage() {
               </h2>
               <p className="text-[13px] text-[var(--muted)]">
                 Live-action vs AI-assisted and other formats, with pacing
-                (average episodes) and average runtime per episode.
+                (average episodes per title).
               </p>
             </div>
 
@@ -379,9 +392,6 @@ export default async function InsightsPage() {
                     </th>
                     <th scope="col" className="py-2 px-2 font-medium text-right tabular-nums">
                       Avg eps
-                    </th>
-                    <th scope="col" className="py-2 pl-2 font-medium text-right tabular-nums">
-                      Avg runtime
                     </th>
                   </tr>
                 </thead>
@@ -403,13 +413,8 @@ export default async function InsightsPage() {
                       <td className="py-2.5 px-2 text-right tabular-nums font-semibold text-[var(--ink)]">
                         {formatPct(row.pctOfSeries)}
                       </td>
-                      <td className="py-2.5 px-2 text-right tabular-nums text-[var(--muted)]">
-                        {row.avgEpisodes == null ? '—' : formatAvg(row.avgEpisodes)}
-                      </td>
                       <td className="py-2.5 pl-2 text-right tabular-nums text-[var(--muted)]">
-                        {row.avgRuntimeMinutes == null
-                          ? '—'
-                          : `${formatAvg(row.avgRuntimeMinutes)} min`}
+                        {row.avgEpisodes == null ? '—' : formatAvg(row.avgEpisodes)}
                       </td>
                     </tr>
                   ))}

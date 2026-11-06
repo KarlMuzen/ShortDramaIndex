@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Platform, Tag } from '@/src/data/types';
+import type { BrowseLanguage } from '@/src/data/repository';
 import { Select } from '@/src/components/ui/select';
 import { Radio } from '@/src/components/ui/radio';
 import { RotateCcw } from 'lucide-react';
@@ -10,6 +11,10 @@ import { RotateCcw } from 'lucide-react';
 interface SearchFiltersProps {
   platforms: Platform[];
   tags: Tag[];
+  // Languages present in the catalog, derived live by the search page.
+  // When omitted, no language options are offered beyond "All languages",
+  // so the filter can never lead to an empty result set.
+  languages?: BrowseLanguage[];
   onApply?: () => void;
   className?: string;
   hideHeader?: boolean;
@@ -18,6 +23,7 @@ interface SearchFiltersProps {
 export function SearchFilters({
   platforms,
   tags,
+  languages = [],
   onApply,
   className,
   hideHeader = false,
@@ -114,12 +120,13 @@ export function SearchFilters({
           onChange={(e) => updateParam('lang', e.target.value)}
           options={[
             { value: '', label: 'All languages' },
-            { value: 'en', label: 'English' },
-            { value: 'zh', label: 'Chinese (中文)' },
-            { value: 'ko', label: 'Korean (한국어)' },
-            { value: 'es', label: 'Spanish (Español)' },
-            { value: 'ja', label: 'Japanese (日本語)' },
-            { value: 'hi', label: 'Hindi (हिन्दी)' },
+            ...languages.map((lang) => ({
+              value: lang.code,
+              label:
+                lang.nativeLabel && lang.nativeLabel !== lang.label
+                  ? `${lang.label} (${lang.nativeLabel})`
+                  : lang.label,
+            })),
           ]}
         />
       </div>

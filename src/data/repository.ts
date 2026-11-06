@@ -396,7 +396,7 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
           relativeTime: getRelativeTimeString(a.added_at || '2024-01-01'),
         }));
 
-      const browseLanguages: BrowseLanguage[] = [
+      const allBrowseLanguages: BrowseLanguage[] = [
         { code: 'en', label: 'English', nativeLabel: 'English', count: languageCounts['en'] || undefined },
         { code: 'zh', label: 'Chinese', nativeLabel: '中文', count: languageCounts['zh'] || undefined },
         { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: languageCounts['ko'] || undefined },
@@ -404,6 +404,17 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
         { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: languageCounts['ja'] || undefined },
         { code: 'hi', label: 'Hindi', nativeLabel: 'हिन्दी', count: languageCounts['hi'] || undefined },
       ];
+
+      // Only languages with indexed titles get a pill: a pill for a
+      // language with no titles leads to an empty search. If the counts
+      // query failed, every count is undefined, so keep the full list
+      // (fail-open) instead of hiding the whole section.
+      const hasKnownCounts = allBrowseLanguages.some(
+        (lang) => typeof lang.count === 'number'
+      );
+      const browseLanguages = hasKnownCounts
+        ? allBrowseLanguages.filter((lang) => (lang.count ?? 0) > 0)
+        : allBrowseLanguages;
 
       const platformsWithReleases = homeRelError
         ? null
@@ -464,7 +475,7 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
     }
   }
 
-  const browseLanguages: BrowseLanguage[] = [
+  const allBrowseLanguages: BrowseLanguage[] = [
     { code: 'en', label: 'English', nativeLabel: 'English', count: languageCounts['en'] || undefined },
     { code: 'zh', label: 'Chinese', nativeLabel: '中文', count: languageCounts['zh'] || undefined },
     { code: 'ko', label: 'Korean', nativeLabel: '한국어', count: languageCounts['ko'] || undefined },
@@ -472,6 +483,12 @@ export async function getHomePageFeed(): Promise<HomeFeedData> {
     { code: 'ja', label: 'Japanese', nativeLabel: '日本語', count: languageCounts['ja'] || undefined },
     { code: 'hi', label: 'Hindi', nativeLabel: 'हिन्दी', count: languageCounts['hi'] || undefined },
   ];
+
+  // Same rule as the live branch: only languages with indexed titles get
+  // a pill, so a pill never leads to an empty search.
+  const browseLanguages = allBrowseLanguages.filter(
+    (lang) => (lang.count ?? 0) > 0
+  );
 
   return {
     popularThisWeek: sortedPopular,
@@ -1774,6 +1791,68 @@ export async function getAllTags(): Promise<Tag[]> {
     }
   }
   return mockTags;
+}
+
+// Native labels for the languages the catalog actually carries; unknown
+// codes fall back to their English name.
+const LANGUAGE_NATIVE_LABELS: Record<string, string> = {
+  en: 'English',
+  zh: '中文',
+  ko: '한국어',
+  es: 'Español',
+  ja: '日本語',
+  hi: 'हिन्दी',
+};
+
+function toBrowseLanguages(counts: Record<string, number>): BrowseLanguage[] {
+  return Object.entries(counts)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([code, count]) => ({
+      code,
+      label: getLanguageName(code),
+      nativeLabel: LANGUAGE_NATIVE_LABELS[code] ?? getLanguageName(code),
+      count,
+    }));
+}
+
+/**
+ * Languages present in the public catalog, with title counts. The search
+ * filters derive their language options from this, so users are never
+ * offered a language with no titles to show.
+ */
+export async function getCatalogLanguages(): Promise<BrowseLanguage[]> {
+  if (!isSupabaseConfigured && !allowMockData) return mockDataUnavailable('getCatalogLanguages', []);
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabasePublic
+        .from('series')
+        .select('original_language')
+        .eq('visibility', 'public')
+        .limit(1000);
+
+      if (error) logDataError('repository', error);
+      if (error || !data) return [];
+
+      const counts: Record<string, number> = {};
+      for (const row of data as any[]) {
+        const code = row.original_language || 'en';
+        counts[code] = (counts[code] || 0) + 1;
+      }
+      return toBrowseLanguages(counts);
+    } catch (error) {
+      logDataError('repository', error);
+      return [];
+    }
+  }
+
+  const counts: Record<string, number> = {};
+  for (const s of mockSeriesList) {
+    if (s.visibility === 'public') {
+      counts[s.originalLanguage] = (counts[s.originalLanguage] || 0) + 1;
+    }
+  }
+  return toBrowseLanguages(counts);
 }
 
 /**

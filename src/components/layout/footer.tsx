@@ -63,7 +63,7 @@ export function Footer() {
 
       {/* Bottom copyright */}
       <div className="border-t border-[var(--line)]/50 py-3 text-center text-[12px] text-[var(--muted)]">
-        <span className="tabular-nums">&copy; {currentYear} {siteConfig.name}. All data curated by contributors.</span>
+        <span className="tabular-nums">&copy; {currentYear} {siteConfig.name}. Cross-market reference index.</span>
       </div>
     </footer>
   );

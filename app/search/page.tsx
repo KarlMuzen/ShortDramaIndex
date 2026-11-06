@@ -3,6 +3,7 @@ import {
   searchSeries,
   getAllPlatforms,
   getAllTags,
+  getCatalogLanguages,
 } from '@/src/data/repository';
 import { SearchFilters as SearchFiltersType } from '@/src/data/types';
 import { siteConfig } from '@/src/config/site';
@@ -73,7 +74,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     episodeRange: params.episodes,
   };
 
-  const [searchResult, platforms, tags] = await Promise.all([
+  const [searchResult, platforms, tags, catalogLanguages] = await Promise.all([
     searchSeries({
       query: q,
       filters,
@@ -83,6 +84,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     }),
     getAllPlatforms(),
     getAllTags(),
+    getCatalogLanguages(),
   ]);
 
   return (
@@ -93,13 +95,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         totalResults={searchResult.total}
         platforms={platforms}
         tags={tags}
+        languages={catalogLanguages}
       />
 
       {/* Main Content Grid: Desktop Left Rail + Results */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pt-2">
         {/* Desktop Left Rail Filters */}
         <aside className="hidden lg:block lg:col-span-4 xl:col-span-3 p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[12px]">
-          <SearchFilters platforms={platforms} tags={tags} />
+          <SearchFilters platforms={platforms} tags={tags} languages={catalogLanguages} />
         </aside>
 
         {/* Results Area */}
