@@ -180,7 +180,7 @@ export default async function HomePage() {
           >
             Recently added names
           </h2>
-          <span className="text-[12px] text-[var(--muted)]">Community contributions</span>
+          <span className="text-[12px] text-[var(--muted)]">Verified alternate titles</span>
         </div>
 
         {recentlyAddedAliases.length > 0 ? (

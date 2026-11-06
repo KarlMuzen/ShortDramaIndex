@@ -7,6 +7,7 @@ import { Dialog } from '@/src/components/ui/dialog';
 import { Select } from '@/src/components/ui/select';
 import { SearchFilters } from './search-filters';
 import { Platform, Tag } from '@/src/data/types';
+import type { BrowseLanguage } from '@/src/data/repository';
 import { SEARCH_PLACEHOLDER } from '@/src/config/site';
 import { Search, SlidersHorizontal, Link as LinkIcon, X } from 'lucide-react';
 
@@ -15,6 +16,7 @@ interface SearchBarHeaderProps {
   totalResults: number;
   platforms: Platform[];
   tags: Tag[];
+  languages: BrowseLanguage[];
 }
 
 export function SearchBarHeader({
@@ -22,6 +24,7 @@ export function SearchBarHeader({
   totalResults,
   platforms,
   tags,
+  languages,
 }: SearchBarHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -211,6 +214,7 @@ export function SearchBarHeader({
         <SearchFilters
           platforms={platforms}
           tags={tags}
+          languages={languages}
           onApply={() => setMobileFiltersOpen(false)}
           hideHeader={true}
         />
